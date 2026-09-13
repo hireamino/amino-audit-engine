@@ -44,10 +44,9 @@ jobs:
       - name: G5 and G7 — prove output and compatibility equivalence
         run: node test/equivalence.mjs
       - name: G6 — prove the findings inventory
-        env:
-          PARITY_PY: ${{ runner.temp }}/amino-skills/amino-deliverability-audit/skills/amino-deliverability-audit/scripts/audit.py
-          PARITY_JS: ${{ github.workspace }}/src/engine.mjs
-        run: node "$SKILLS_DIR/web-parity/inventory.mjs"
+        run: |
+          PARITY_PY="$SKILLS_DIR/amino-deliverability-audit/skills/amino-deliverability-audit/scripts/audit.py" \
+            PARITY_JS="$ENGINE" node "$SKILLS_DIR/web-parity/inventory.mjs"
       - name: G8 — prove the SSRF order and ambient-I/O boundary
         run: |
           node test/ssrf.mjs
