@@ -1,0 +1,9 @@
+{
+  "name": "@hireamino/audit-engine",
+  "version": "0.0.0-private",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "bash scripts/verify.sh"
+  }
+}
