@@ -1,0 +1,53 @@
+name: Engine contract
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SKILLS_DIR: ${{ github.workspace }}/.cache/amino-skills
+      BASELINE_DIR: ${{ github.workspace }}/.cache/amino-audit-action
+      ENGINE: ${{ github.workspace }}/src/engine.mjs
+      BASELINE_ENGINE: ${{ github.workspace }}/.cache/amino-audit-action/src/engine.mjs
+      PUBLIC_LICENSE: ${{ github.workspace }}/.cache/amino-audit-action/LICENSE
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Fetch exact reviewed-answer contract
+        run: scripts/fetch-pinned-skills.sh "$SKILLS_DIR"
+      - name: Fetch immutable extraction baseline
+        run: scripts/fetch-source-baseline.sh "$BASELINE_DIR"
+      - name: G1 — prove source and artifact provenance
+        run: node test/provenance.mjs
+      - name: G2 — run the unchanged corpus for both surfaces
+        run: |
+          SURFACE=web node "$SKILLS_DIR/conformance/run.mjs"
+          SURFACE=action node "$SKILLS_DIR/conformance/run.mjs"
+      - name: G3 — deny network, freeze clock and reproduce the before-state
+        run: |
+          SURFACE=web RUNNER="$SKILLS_DIR/conformance/run.mjs" EXPECT_FETCH_CALLS=0 node test/network-observe.mjs
+          SURFACE=action RUNNER="$SKILLS_DIR/conformance/run.mjs" EXPECT_FETCH_CALLS=0 node test/network-observe.mjs
+          SURFACE=action ENGINE="$BASELINE_ENGINE" RUNNER="$SKILLS_DIR/conformance/run.mjs" EXPECT_FETCH_CALLS=19 node test/network-observe.mjs
+      - name: G4 — prove all mutation canaries for both surfaces
+        run: |
+          SURFACE=web node "$SKILLS_DIR/conformance/canary.mjs"
+          SURFACE=action node "$SKILLS_DIR/conformance/canary.mjs"
+      - name: G5 and G7 — prove output and compatibility equivalence
+        run: node test/equivalence.mjs
+      - name: G6 — prove the findings inventory
+        run: |
+          PARITY_PY="$SKILLS_DIR/amino-deliverability-audit/skills/amino-deliverability-audit/scripts/audit.py" \
+            PARITY_JS="$ENGINE" node "$SKILLS_DIR/web-parity/inventory.mjs"
+      - name: G8 — prove the SSRF order and ambient-I/O boundary
+        run: |
+          node test/ssrf.mjs
+          node test/purity.mjs
