@@ -12,20 +12,20 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      SKILLS_DIR: ${{ runner.temp }}/amino-skills
-      BASELINE_DIR: ${{ runner.temp }}/amino-audit-action
+      SKILLS_DIR: ${{ github.workspace }}/.cache/amino-skills
+      BASELINE_DIR: ${{ github.workspace }}/.cache/amino-audit-action
       ENGINE: ${{ github.workspace }}/src/engine.mjs
-      BASELINE_ENGINE: ${{ runner.temp }}/amino-audit-action/src/engine.mjs
-      PUBLIC_LICENSE: ${{ runner.temp }}/amino-audit-action/LICENSE
+      BASELINE_ENGINE: ${{ github.workspace }}/.cache/amino-audit-action/src/engine.mjs
+      PUBLIC_LICENSE: ${{ github.workspace }}/.cache/amino-audit-action/LICENSE
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
       - name: Fetch exact reviewed-answer contract
-        run: scripts/fetch-pinned-skills.sh "$RUNNER_TEMP/amino-skills"
+        run: scripts/fetch-pinned-skills.sh "$SKILLS_DIR"
       - name: Fetch immutable extraction baseline
-        run: scripts/fetch-source-baseline.sh "$RUNNER_TEMP/amino-audit-action"
+        run: scripts/fetch-source-baseline.sh "$BASELINE_DIR"
       - name: G1 — prove source and artifact provenance
         run: node test/provenance.mjs
       - name: G2 — run the unchanged corpus for both surfaces
