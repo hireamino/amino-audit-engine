@@ -1,5 +1,5 @@
 {
-  "contractVersion": "1.0.0",
+  "contractVersion": "1.1.0",
   "source": {
     "repository": "hireamino/amino-audit-action",
     "commit": "ae04a363f76da800ac6d98a3647cf5bf5ab7e44a",
@@ -11,12 +11,13 @@
   },
   "artifact": {
     "path": "src/engine.mjs",
-    "sha256": "097545d33188948c7f700970de5d247c18a251907789057ad4d74c83769799f8"
+    "sha256": "146a91ad5dfc047e28ade78ebe5bdf8788519b8b3b29c76b192e3a32ac7657e0"
   },
   "allowedTransformations": [
     "remove unused route-only validation, escaping, and rate-limit constants from the extracted segment",
     "replace ambient DNS, HTTP, and clock access with injected ports",
     "retain SSRF resolve-and-public-IP checks inside the engine before HTTP port calls",
-    "add createAuditEngine, contractVersion, and legacy compatibility exports"
+    "add createAuditEngine, contractVersion, and legacy compatibility exports",
+    "export the existing real DoH, HTTPS, and clock adapter factory as createDefaultAdapters"
   ]
 }

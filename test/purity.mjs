@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 
 const file = process.env.ENGINE || "src/engine.mjs";
 const source = readFileSync(file, "utf8");
-const start = source.indexOf("function createDefaultRealAdapters() {");
+const start = source.indexOf("export function createDefaultAdapters() {");
 const end = source.indexOf("\n// ─────────────────────────────────────────────────────────────────────────────\n// DNS helpers", start);
 if (start < 0 || end < 0) throw new Error("default real-adapter factory boundary not found");
 
@@ -24,4 +24,4 @@ for (const banned of ["onRequestGet", "rateLimited", "htmlResponse", "renderResu
   }
 }
 if (failed) process.exit(1);
-console.log("Purity PASS: ambient network/time access is confined to the compatibility-adapter factory.");
+console.log("Purity PASS: ambient network/time access is confined to createDefaultAdapters().");
