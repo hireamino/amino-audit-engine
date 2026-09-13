@@ -69,6 +69,8 @@ jobs:
         run: node test/equivalence.mjs
       - name: G9 and G10 — prove production adapters and the compatibility trap
         run: node test/default-adapters.mjs
+      - name: B1 — prove the per-request adapter regression detector
+        run: node test/cache-lifetime-canary.mjs
       - name: N2 — prove the expiry boundary canary
         run: node test/boundary-canary.mjs
       - name: G6 — prove the findings inventory

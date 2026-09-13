@@ -36,6 +36,8 @@ SKILLS_DIR="$SKILLS_DIR" BASELINE_ENGINE="$BASELINE_ENGINE" ENGINE="$ENGINE" \
 SKILLS_DIR="$SKILLS_DIR" BASELINE_ENGINE="$BASELINE_ENGINE" ENGINE="$ENGINE" \
   node "$ROOT/test/default-adapters.mjs"
 SKILLS_DIR="$SKILLS_DIR" BASELINE_ENGINE="$BASELINE_ENGINE" ENGINE="$ENGINE" \
+  node "$ROOT/test/cache-lifetime-canary.mjs"
+SKILLS_DIR="$SKILLS_DIR" BASELINE_ENGINE="$BASELINE_ENGINE" ENGINE="$ENGINE" \
   node "$ROOT/test/boundary-canary.mjs"
 node "$ROOT/test/ssrf.mjs"
 ENGINE="$ENGINE" node "$ROOT/test/purity.mjs"

@@ -108,10 +108,10 @@ function response(value, kind) {
 }
 
 function fetchFixture(testCase, calls) {
-  const records = normalizeRecords(testCase.dns);
   return async (rawUrl) => {
     const url = new URL(String(rawUrl));
     if (url.hostname === "cloudflare-dns.com") {
+      const records = normalizeRecords(typeof testCase.dns === "function" ? testCase.dns() : testCase.dns);
       const name = (url.searchParams.get("name") || "").replace(/\.+$/, "").toLowerCase();
       const rrtype = url.searchParams.get("type");
       calls.push(`dns:${rrtype}:${name}`);
@@ -154,7 +154,7 @@ async function withAmbientFixture(testCase, run) {
   globalThis.fetch = fetchFixture(testCase, calls);
   Date.now = () => frozenNow;
   try {
-    return { output: await run(), calls };
+    return { output: await run(calls), calls };
   } finally {
     globalThis.fetch = realFetch;
     Date.now = realNow;
@@ -168,14 +168,21 @@ for (const testCase of cases) {
     const engine = canonical.createAuditEngine(canonical.createDefaultAdapters());
     return engine.auditDomain(testCase.domain);
   });
+  const compatibility = await withAmbientFixture(testCase, () => canonical.auditDomain(testCase.domain));
   const beforeBytes = Buffer.from(JSON.stringify(before.output));
   const afterBytes = Buffer.from(JSON.stringify(after.output));
+  const compatibilityBytes = Buffer.from(JSON.stringify(compatibility.output));
   if (!beforeBytes.equals(afterBytes)) throw new Error(`G9 ${testCase.id}: baseline no-q and createDefaultAdapters outputs differ`);
+  if (!beforeBytes.equals(compatibilityBytes)) throw new Error(`G9 ${testCase.id}: baseline and canonical no-q compatibility outputs differ`);
   productionOutputs.set(testCase.id, after.output);
   console.log(`G9 PASS ${testCase.id}: ${afterBytes.length} bytes, baseline fetches=${before.calls.length}, canonical fetches=${after.calls.length}`);
 }
 console.log(`G9 production calling convention PASS: ${cases.length}/6 byte-identical.`);
+console.log(`G9 no-q compatibility path PASS: ${cases.length}/6 byte-identical to the baseline.`);
 
+// G10 proves the documented supplied-resolver result differs from the production
+// path. It does not detect a compatibility branch that re-enables ambient HTTP
+// under denied network; G3 is the independent guard for that regression.
 const trapCase = cases.find((testCase) => testCase.id === "mta-sts-valid");
 const offline = await canonical.auditDomain(trapCase.domain, resolver(trapCase.dns));
 const production = productionOutputs.get(trapCase.id);
@@ -187,6 +194,50 @@ if (offlineFinding?.title !== "MTA-STS TXT present but policy file not retrievab
   throw new Error(`G10 unexpected trap evidence: ${JSON.stringify({ offlineFinding, productionFinding })}`);
 }
 console.log(`G10 trap PASS: offline=[${offlineFinding.severity}] ${offlineFinding.title}; production=[${productionFinding.severity}] ${productionFinding.title}`);
+
+const cacheDomain = "cache-lifetime.test";
+const withoutSpf = baseDns(cacheDomain);
+const withSpf = { ...baseDns(cacheDomain), [cacheDomain]: { ...baseDns(cacheDomain)[cacheDomain], TXT: ["v=spf1 -all"] } };
+let liveDns = withoutSpf;
+const cacheCase = {
+  domain: cacheDomain,
+  dns: () => liveDns,
+  http: { mtaSts: notFound, robots: notFound, rdap: notFound },
+};
+const hasTitle = (audit, title) => audit.findings.some((finding) => finding.title === title);
+const perRequestExpectedTitle = "SPF present";
+const perRequest = await withAmbientFixture(cacheCase, async () => {
+  liveDns = withoutSpf;
+  const first = await canonical.createAuditEngine(canonical.createDefaultAdapters()).auditDomain(cacheDomain);
+  liveDns = withSpf;
+  const second = await canonical.createAuditEngine(canonical.createDefaultAdapters()).auditDomain(cacheDomain);
+  return { first, second };
+});
+if (!hasTitle(perRequest.output.first, "No SPF record")) {
+  throw new Error('B1 per-request audit 1 expected "No SPF record"');
+}
+if (!hasTitle(perRequest.output.second, perRequestExpectedTitle) || hasTitle(perRequest.output.second, "No SPF record")) {
+  throw new Error(`B1 per-request audit 2 expected "${perRequestExpectedTitle}" and no "No SPF record"`);
+}
+console.log('B1 per-request cache lifetime PASS: audit 1="No SPF record"; audit 2="SPF present".');
+
+const shared = await withAmbientFixture(cacheCase, async (calls) => {
+  liveDns = withoutSpf;
+  const engine = canonical.createAuditEngine(canonical.createDefaultAdapters());
+  const first = await engine.auditDomain(cacheDomain);
+  liveDns = withSpf;
+  const beforeSecond = calls.filter((call) => call.startsWith("dns:")).length;
+  const second = await engine.auditDomain(cacheDomain);
+  const afterSecond = calls.filter((call) => call.startsWith("dns:")).length;
+  return { first, second, secondDnsFetches: afterSecond - beforeSecond };
+});
+if (!hasTitle(shared.output.first, "No SPF record") || !hasTitle(shared.output.second, "No SPF record")) {
+  throw new Error('B1 shared engine must pin the audit-1 "No SPF record" result in audit 2');
+}
+if (hasTitle(shared.output.second, "SPF present") || shared.output.secondDnsFetches !== 0) {
+  throw new Error(`B1 shared engine expected stale "No SPF record" and 0 audit-2 DNS fetches, got ${shared.output.secondDnsFetches}`);
+}
+console.log('B1 shared cache lifetime PINNED: audit 2="No SPF record" with 0 DNS fetches after SPF publication.');
 
 const dedupeCase = { domain: "dedupe.test", dns: { "dedupe.test": { A: ["203.0.113.20"] } }, http: {} };
 const dedupe = await withAmbientFixture(dedupeCase, async () => {

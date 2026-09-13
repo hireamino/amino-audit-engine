@@ -27,8 +27,10 @@ const engine = createAuditEngine({
 const audit = await engine.auditDomain("example.com");
 const score = await engine.buckets("example.com");
 
-// In-process production consumers can use the engine's real DoH/HTTPS/clock ports.
-const productionEngine = createAuditEngine(createDefaultAdapters());
+// Create the real adapters and engine inside each request/audit boundary.
+export async function handleAudit(domain) {
+  return createAuditEngine(createDefaultAdapters()).auditDomain(domain);
+}
 ```
 
 `contractVersion` is a string describing the adapter and exported-result contract. Adding it does not change `auditDomain()` or `buckets()` output.
@@ -38,6 +40,7 @@ const productionEngine = createAuditEngine(createDefaultAdapters());
 - `query(name, rrtype) -> Promise<string[]>` returns the normalized record strings used by the existing resolver contract.
 - `meta(name, rrtype) -> Promise<{status, ad, error}>` returns DNS RCODE, authenticated-data state, and transport-error state. It supports the existing inconclusive-audit behavior.
 - The injected DNS adapter owns DNS transport, caching, in-flight request deduplication, timeout, retry, and resolver selection. `createDefaultAdapters()` retains the existing per-instance cache of in-flight DNS promises.
+- That cache lasts for the adapter's entire lifetime and has no TTL or eviction. Production consumers must create adapters per audit and must never share a default-adapter engine instance across requests; doing so would serve stale DNS records on later audits.
 
 ### HTTP ports
 
@@ -94,6 +97,12 @@ The test command fetches the pinned corpus and immutable extraction baseline whe
 ## Consumer and service boundary
 
 The web audit and GitHub Action will later become thin host adapters around an exact-SHA copy of this file. The Action remains in-process and offline-capable. WHI-44 may separately wrap the same engine as one Cloudflare Posture Audit service for console/backend use; authentication, tenant authorization, quotas, persistence, scheduling, and operational telemetry belong to that service boundary, not this engine.
+
+### Consumer-migration merge gates
+
+- Production uses `createAuditEngine(createDefaultAdapters())`; no real resolver is passed through a compatibility export.
+- Adapters are created per request, proven against the old engine, so a DNS change between audits is observed instead of being hidden by a shared cache.
+- The pinned corpus, mutation canaries, boundary fixtures, production-path equivalence, inventory, SSRF, rollback, and hosted checks all pass on the exact consumer PR head.
 
 ## License
 

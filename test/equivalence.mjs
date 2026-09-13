@@ -43,10 +43,16 @@ const notFound = { status: 404, contentType: "text/plain", body: "" };
 const frozenNow = Date.parse("2026-09-13T00:00:00Z");
 const daysFromNow = (days) => new Date(frozenNow + days * 86400000).toISOString();
 const policyAtLength = (domain, length) => {
-  const prefix = `version: STSv1\nmode: enforce\nmx: mx.${domain}\nmax_age: 86400\n`;
-  if (prefix.length > length) throw new Error(`policy prefix exceeds requested length ${length}`);
-  return prefix + "#".repeat(length - prefix.length);
+  const prefix = `version: STSv1\nmx: mx.${domain}\nmax_age: 86400\n`;
+  const suffix = "\nmode: enforce";
+  if (prefix.length + suffix.length > length) throw new Error(`policy fields exceed requested length ${length}`);
+  return prefix + "#".repeat(length - prefix.length - suffix.length) + suffix;
 };
+const cap8192Policy = policyAtLength("cap-8192.test", 8192);
+const cap8193Policy = policyAtLength("cap-8193.test", 8193);
+if (Buffer.byteLength(cap8192Policy) !== 8192 || Buffer.byteLength(cap8193Policy) !== 8193) {
+  throw new Error("MTA-STS cap fixtures must be exactly 8192 and 8193 bytes");
+}
 const scenarios = [
   {
     id: "http-mta-sts-valid",
@@ -148,21 +154,21 @@ const boundaryCases = [
     },
   },
   {
-    id: "boundary-mta-sts-body-8191",
-    domain: "mta-8191.test",
-    dns: mtaDns("mta-8191.test"),
+    id: "cap-8192-valid",
+    domain: "cap-8192.test",
+    dns: mtaDns("cap-8192.test"),
     http: {
-      mtaSts: okText(policyAtLength("mta-8191.test", 8191)),
+      mtaSts: okText(cap8192Policy),
       robots: notFound,
       rdap: notFound,
     },
   },
   {
-    id: "boundary-mta-sts-body-8193",
-    domain: "mta-8193.test",
-    dns: mtaDns("mta-8193.test"),
+    id: "cap-8193-cut",
+    domain: "cap-8193.test",
+    dns: mtaDns("cap-8193.test"),
     http: {
-      mtaSts: okText(policyAtLength("mta-8193.test", 8193)),
+      mtaSts: okText(cap8193Policy),
       robots: notFound,
       rdap: notFound,
     },
