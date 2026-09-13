@@ -33,7 +33,13 @@ PARITY_PY="$SKILLS_DIR/amino-deliverability-audit/skills/amino-deliverability-au
 
 SKILLS_DIR="$SKILLS_DIR" BASELINE_ENGINE="$BASELINE_ENGINE" ENGINE="$ENGINE" \
   node "$ROOT/test/equivalence.mjs"
+SKILLS_DIR="$SKILLS_DIR" BASELINE_ENGINE="$BASELINE_ENGINE" ENGINE="$ENGINE" \
+  node "$ROOT/test/default-adapters.mjs"
+SKILLS_DIR="$SKILLS_DIR" BASELINE_ENGINE="$BASELINE_ENGINE" ENGINE="$ENGINE" \
+  node "$ROOT/test/cache-lifetime-canary.mjs"
+SKILLS_DIR="$SKILLS_DIR" BASELINE_ENGINE="$BASELINE_ENGINE" ENGINE="$ENGINE" \
+  node "$ROOT/test/boundary-canary.mjs"
 node "$ROOT/test/ssrf.mjs"
 ENGINE="$ENGINE" node "$ROOT/test/purity.mjs"
 
-echo "ALL PHASE 1 GATES PASS"
+echo "ALL PHASE 2 GATES PASS"

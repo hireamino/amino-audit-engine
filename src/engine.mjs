@@ -60,7 +60,7 @@ async function mapPool(items, limit, fn) {
 // Per-request cache (stores in-flight promises so concurrent checks dedupe).
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const contractVersion = "1.0.0";
+export const contractVersion = "1.1.0";
 
 const UNAVAILABLE_HTTP = Object.freeze({
   mtaSts: async () => null,
@@ -86,9 +86,10 @@ function dnsFromLegacyQuery(query) {
   };
 }
 
-// The only ambient-I/O boundary in this module. It exists solely for the legacy
-// compatibility exports below; createAuditEngine callers provide explicit ports.
-function createDefaultRealAdapters() {
+// The only ambient-I/O boundary in this module. Production in-process consumers
+// may pass these adapters explicitly to createAuditEngine(); compatibility calls
+// without a resolver use the same factory so there is one real implementation.
+export function createDefaultAdapters() {
   const cache = new Map();
   const metaCache = new Map(); // "type name" -> { status, ad, error }
   async function raw(name, rrtype) {
@@ -1194,7 +1195,7 @@ export function createAuditEngine({ dns, http, clock }) {
 }
 
 function compatibilityAdapters(q) {
-  if (!q) return createDefaultRealAdapters();
+  if (!q) return createDefaultAdapters();
   return {
     dns: dnsFromLegacyQuery(q),
     // A supplied legacy resolver denotes a fixture/offline caller. Purpose-specific

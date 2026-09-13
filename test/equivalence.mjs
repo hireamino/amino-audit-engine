@@ -12,8 +12,10 @@ if (!skillsDir || !baselinePath) {
 
 const baseline = await import(pathToFileURL(baselinePath).href);
 const canonical = await import(pathToFileURL(canonicalPath).href);
-if (canonical.contractVersion !== "1.0.0" || typeof canonical.createAuditEngine !== "function") {
-  throw new Error("canonical engine must export contractVersion=1.0.0 and createAuditEngine()");
+if (canonical.contractVersion !== "1.1.0"
+  || typeof canonical.createAuditEngine !== "function"
+  || typeof canonical.createDefaultAdapters !== "function") {
+  throw new Error("canonical engine must export contractVersion=1.1.0, createAuditEngine(), and createDefaultAdapters()");
 }
 
 const corpus = JSON.parse(readFileSync(`${skillsDir}/conformance/fixtures.json`, "utf8"));
@@ -38,6 +40,19 @@ const mtaDns = (domain) => ({
 });
 const okText = (body) => ({ status: 200, contentType: "text/plain; charset=utf-8", body });
 const notFound = { status: 404, contentType: "text/plain", body: "" };
+const frozenNow = Date.parse("2026-09-13T00:00:00Z");
+const daysFromNow = (days) => new Date(frozenNow + days * 86400000).toISOString();
+const policyAtLength = (domain, length) => {
+  const prefix = `version: STSv1\nmx: mx.${domain}\nmax_age: 86400\n`;
+  const suffix = "\nmode: enforce";
+  if (prefix.length + suffix.length > length) throw new Error(`policy fields exceed requested length ${length}`);
+  return prefix + "#".repeat(length - prefix.length - suffix.length) + suffix;
+};
+const cap8192Policy = policyAtLength("cap-8192.test", 8192);
+const cap8193Policy = policyAtLength("cap-8193.test", 8193);
+if (Buffer.byteLength(cap8192Policy) !== 8192 || Buffer.byteLength(cap8193Policy) !== 8193) {
+  throw new Error("MTA-STS cap fixtures must be exactly 8192 and 8193 bytes");
+}
 const scenarios = [
   {
     id: "http-mta-sts-valid",
@@ -97,7 +112,88 @@ const scenarios = [
   },
 ];
 const cases = [...corpusCases, ...scenarios];
-const frozenNow = Date.parse("2026-09-13T00:00:00Z");
+const boundaryCases = [
+  {
+    id: "boundary-domain-age-89",
+    domain: "age-89.test",
+    dns: {},
+    http: {
+      mtaSts: notFound,
+      robots: notFound,
+      rdap: { status: 200, data: { events: [{ eventAction: "registration", eventDate: daysFromNow(-89) }] } },
+    },
+  },
+  {
+    id: "boundary-domain-age-90",
+    domain: "age-90.test",
+    dns: {},
+    http: {
+      mtaSts: notFound,
+      robots: notFound,
+      rdap: { status: 200, data: { events: [{ eventAction: "registration", eventDate: daysFromNow(-90) }] } },
+    },
+  },
+  {
+    id: "boundary-expiry-29",
+    domain: "expiry-29.test",
+    dns: {},
+    http: {
+      mtaSts: notFound,
+      robots: notFound,
+      rdap: { status: 200, data: { events: [{ eventAction: "expiration", eventDate: daysFromNow(29) }] } },
+    },
+  },
+  {
+    id: "boundary-expiry-30",
+    domain: "expiry-30.test",
+    dns: {},
+    http: {
+      mtaSts: notFound,
+      robots: notFound,
+      rdap: { status: 200, data: { events: [{ eventAction: "expiration", eventDate: daysFromNow(30) }] } },
+    },
+  },
+  {
+    id: "cap-8192-valid",
+    domain: "cap-8192.test",
+    dns: mtaDns("cap-8192.test"),
+    http: {
+      mtaSts: okText(cap8192Policy),
+      robots: notFound,
+      rdap: notFound,
+    },
+  },
+  {
+    id: "cap-8193-cut",
+    domain: "cap-8193.test",
+    dns: mtaDns("cap-8193.test"),
+    http: {
+      mtaSts: okText(cap8193Policy),
+      robots: notFound,
+      rdap: notFound,
+    },
+  },
+  {
+    id: "boundary-robots-3xx",
+    domain: "robots-redirect.test",
+    dns: baseDns("robots-redirect.test"),
+    http: {
+      mtaSts: notFound,
+      robots: { status: 302, body: "User-agent: *\nDisallow: /\n" },
+      rdap: notFound,
+    },
+  },
+  {
+    id: "boundary-mta-sts-non-text",
+    domain: "mta-non-text.test",
+    dns: mtaDns("mta-non-text.test"),
+    http: {
+      mtaSts: { status: 200, contentType: "application/octet-stream", body: policyAtLength("mta-non-text.test", 200) },
+      robots: notFound,
+      rdap: notFound,
+    },
+  },
+];
 
 function makeDns(records) {
   const norm = (name) => name.replace(/\.+$/, "").toLowerCase();
@@ -213,8 +309,7 @@ async function runCompatibility(testCase) {
   };
 }
 
-const serialized = [];
-for (const testCase of cases) {
+async function compareCase(testCase) {
   const before = await runBaseline(testCase);
   const after = await runInjected(testCase);
   const compatibility = await runCompatibility(testCase);
@@ -225,10 +320,21 @@ for (const testCase of cases) {
   if (!afterBytes.equals(compatibilityBytes)) throw new Error(`${testCase.id}: compatibility and injected outputs differ`);
   const hash = createHash("sha256").update(afterBytes).digest("hex");
   console.log(`PASS ${testCase.id}: ${afterBytes.length} bytes ${hash}`);
-  serialized.push(afterBytes, Buffer.from("\n"));
+  return afterBytes;
 }
 
-const aggregate = Buffer.concat(serialized);
-const aggregateHash = createHash("sha256").update(aggregate).digest("hex");
-console.log(`Output equivalence PASS: ${cases.length} cases, ${aggregate.length} bytes, SHA-256 ${aggregateHash}`);
-console.log("Compatibility exports PASS: byte-identical to injected interface for every case.");
+async function compareSet(set, label) {
+  const serialized = [];
+  for (const testCase of set) serialized.push(await compareCase(testCase), Buffer.from("\n"));
+  const aggregate = Buffer.concat(serialized);
+  const aggregateHash = createHash("sha256").update(aggregate).digest("hex");
+  console.log(`${label}: ${set.length} cases, ${aggregate.length} bytes, SHA-256 ${aggregateHash}`);
+  return { bytes: aggregate.length, hash: aggregateHash };
+}
+
+const existing = await compareSet(cases, "Output equivalence PASS");
+if (existing.bytes !== 135826 || existing.hash !== "1ef6157758b414cc00c0c511a13f4e4f3bd253e71d019fc59d28bed7616cb6db") {
+  throw new Error(`existing 25-case aggregate changed: ${existing.bytes} bytes ${existing.hash}`);
+}
+await compareSet(boundaryCases, "Boundary equivalence PASS");
+console.log("Compatibility exports PASS: byte-identical to injected interface for every existing and boundary case.");
