@@ -25,9 +25,6 @@ for surface in web action; do
   SURFACE="$surface" ENGINE="$ENGINE" node "$SKILLS_DIR/conformance/canary.mjs"
 done
 
-SURFACE=action ENGINE="$BASELINE_ENGINE" RUNNER="$SKILLS_DIR/conformance/run.mjs" \
-  EXPECT_FETCH_CALLS=19 node "$ROOT/test/network-observe.mjs"
-
 PARITY_PY="$SKILLS_DIR/amino-deliverability-audit/skills/amino-deliverability-audit/scripts/audit.py" \
   PARITY_JS="$ENGINE" node "$SKILLS_DIR/web-parity/inventory.mjs"
 
@@ -37,9 +34,11 @@ SKILLS_DIR="$SKILLS_DIR" BASELINE_ENGINE="$BASELINE_ENGINE" ENGINE="$ENGINE" \
   node "$ROOT/test/default-adapters.mjs"
 SKILLS_DIR="$SKILLS_DIR" BASELINE_ENGINE="$BASELINE_ENGINE" ENGINE="$ENGINE" \
   node "$ROOT/test/cache-lifetime-canary.mjs"
+SKILLS_DIR="$SKILLS_DIR" RUNNER="$SKILLS_DIR/conformance/run.mjs" ENGINE="$ENGINE" \
+  node "$ROOT/test/observation-canary.mjs"
 SKILLS_DIR="$SKILLS_DIR" BASELINE_ENGINE="$BASELINE_ENGINE" ENGINE="$ENGINE" \
   node "$ROOT/test/boundary-canary.mjs"
 node "$ROOT/test/ssrf.mjs"
 ENGINE="$ENGINE" node "$ROOT/test/purity.mjs"
 
-echo "ALL PHASE 2 GATES PASS"
+echo "ALL CONTRACT 1.2 GATES PASS"

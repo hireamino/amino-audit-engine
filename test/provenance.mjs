@@ -21,7 +21,7 @@ const checks = [
   [segment.length === provenance.source.bytes, `source bytes ${segment.length}`],
   [hash(segment) === provenance.source.sha256, `source SHA-256 ${hash(segment)}`],
   [hash(engine) === provenance.artifact.sha256, `artifact SHA-256 ${hash(engine)}`],
-  [provenance.contractVersion === "1.1.0", `contractVersion ${provenance.contractVersion}`],
+  [provenance.contractVersion === "1.2.0", `contractVersion ${provenance.contractVersion}`],
 ];
 if (publicLicense) {
   const license = readFileSync("LICENSE");

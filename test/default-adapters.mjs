@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { pathToFileURL } from "node:url";
 
 const baselinePath = process.env.BASELINE_ENGINE;
@@ -9,10 +10,10 @@ if (!baselinePath) {
 
 const baseline = await import(pathToFileURL(baselinePath).href);
 const canonical = await import(pathToFileURL(canonicalPath).href);
-if (canonical.contractVersion !== "1.1.0"
+if (canonical.contractVersion !== "1.2.0"
   || typeof canonical.createAuditEngine !== "function"
   || typeof canonical.createDefaultAdapters !== "function") {
-  throw new Error("contract 1.1.0 production adapter exports are required");
+  throw new Error("contract 1.2.0 production adapter exports are required");
 }
 
 const frozenNow = Date.parse("2026-09-13T00:00:00Z");
@@ -161,39 +162,19 @@ async function withAmbientFixture(testCase, run) {
   }
 }
 
-const productionOutputs = new Map();
-for (const testCase of cases) {
-  const before = await withAmbientFixture(testCase, () => baseline.auditDomain(testCase.domain));
-  const after = await withAmbientFixture(testCase, () => {
-    const engine = canonical.createAuditEngine(canonical.createDefaultAdapters());
-    return engine.auditDomain(testCase.domain);
-  });
-  const compatibility = await withAmbientFixture(testCase, () => canonical.auditDomain(testCase.domain));
-  const beforeBytes = Buffer.from(JSON.stringify(before.output));
-  const afterBytes = Buffer.from(JSON.stringify(after.output));
-  const compatibilityBytes = Buffer.from(JSON.stringify(compatibility.output));
-  if (!beforeBytes.equals(afterBytes)) throw new Error(`G9 ${testCase.id}: baseline no-q and createDefaultAdapters outputs differ`);
-  if (!beforeBytes.equals(compatibilityBytes)) throw new Error(`G9 ${testCase.id}: baseline and canonical no-q compatibility outputs differ`);
-  productionOutputs.set(testCase.id, after.output);
-  console.log(`G9 PASS ${testCase.id}: ${afterBytes.length} bytes, baseline fetches=${before.calls.length}, canonical fetches=${after.calls.length}`);
+function stripContract12(audit) {
+  const copy = structuredClone(audit);
+  for (const finding of copy.findings) delete finding.lane;
+  delete copy.observations;
+  return copy;
 }
-console.log(`G9 production calling convention PASS: ${cases.length}/6 byte-identical.`);
-console.log(`G9 no-q compatibility path PASS: ${cases.length}/6 byte-identical to the baseline.`);
 
-// G10 proves the documented supplied-resolver result differs from the production
-// path. It does not detect a compatibility branch that re-enables ambient HTTP
-// under denied network; G3 is the independent guard for that regression.
-const trapCase = cases.find((testCase) => testCase.id === "mta-sts-valid");
-const offline = await canonical.auditDomain(trapCase.domain, resolver(trapCase.dns));
-const production = productionOutputs.get(trapCase.id);
-const offlineFinding = offline.findings.find((finding) => finding.area === "MTA-STS");
-const productionFinding = production.findings.find((finding) => finding.area === "MTA-STS");
-if (JSON.stringify(offline) === JSON.stringify(production)) throw new Error("G10 compatibility trap was not detected");
-if (offlineFinding?.title !== "MTA-STS TXT present but policy file not retrievable"
-  || productionFinding?.title !== "MTA-STS present (mode: enforce)") {
-  throw new Error(`G10 unexpected trap evidence: ${JSON.stringify({ offlineFinding, productionFinding })}`);
+function aggregate(outputs) {
+  const parts = [];
+  for (const output of outputs) parts.push(Buffer.from(JSON.stringify(output)), Buffer.from("\n"));
+  const bytes = Buffer.concat(parts);
+  return { bytes: bytes.length, hash: createHash("sha256").update(bytes).digest("hex") };
 }
-console.log(`G10 trap PASS: offline=[${offlineFinding.severity}] ${offlineFinding.title}; production=[${productionFinding.severity}] ${productionFinding.title}`);
 
 const cacheDomain = "cache-lifetime.test";
 const withoutSpf = baseDns(cacheDomain);
@@ -238,6 +219,126 @@ if (hasTitle(shared.output.second, "SPF present") || shared.output.secondDnsFetc
   throw new Error(`B1 shared engine expected stale "No SPF record" and 0 audit-2 DNS fetches, got ${shared.output.secondDnsFetches}`);
 }
 console.log('B1 shared cache lifetime PINNED: audit 2="No SPF record" with 0 DNS fetches after SPF publication.');
+
+const productionOutputs = new Map();
+for (const testCase of cases) {
+  const before = await withAmbientFixture(testCase, () => baseline.auditDomain(testCase.domain));
+  const after = await withAmbientFixture(testCase, () => {
+    const engine = canonical.createAuditEngine(canonical.createDefaultAdapters());
+    return engine.auditDomain(testCase.domain);
+  });
+  const compatibility = await withAmbientFixture(testCase, () => canonical.auditDomain(testCase.domain));
+  const beforeBytes = Buffer.from(JSON.stringify(before.output));
+  const afterBytes = Buffer.from(JSON.stringify(after.output));
+  const strippedBytes = Buffer.from(JSON.stringify(stripContract12(after.output)));
+  const compatibilityBytes = Buffer.from(JSON.stringify(compatibility.output));
+  if (!beforeBytes.equals(strippedBytes)) throw new Error(`G9 ${testCase.id}: baseline and createDefaultAdapters outputs differ after stripping 1.2 fields`);
+  if (!afterBytes.equals(compatibilityBytes)) throw new Error(`G9 ${testCase.id}: canonical no-q compatibility and createDefaultAdapters outputs differ`);
+  productionOutputs.set(testCase.id, after.output);
+  console.log(`G9 PASS ${testCase.id}: ${afterBytes.length} bytes, baseline fetches=${before.calls.length}, canonical fetches=${after.calls.length}`);
+}
+const productionFull = aggregate([...productionOutputs.values()]);
+const productionStripped = aggregate([...productionOutputs.values()].map(stripContract12));
+if (productionFull.bytes !== 36324 || productionFull.hash !== "abb345442d560e102ec1b0f4fc031fab88c3cb06a2bddc33f77a9d2f5df97ba7") {
+  throw new Error(`G9 contract 1.2 production aggregate changed: ${productionFull.bytes} bytes ${productionFull.hash}`);
+}
+if (productionStripped.bytes !== 34186 || productionStripped.hash !== "41cbc4629431f55345862f8cbf92668326cff3c8ef0b517cffd97259ffc9e6a4") {
+  throw new Error(`G9 stripped production aggregate changed: ${productionStripped.bytes} bytes ${productionStripped.hash}`);
+}
+console.log(`G9 production aggregate: ${productionFull.bytes} bytes, SHA-256 ${productionFull.hash}`);
+console.log(`G9 stripped production aggregate: ${productionStripped.bytes} bytes, SHA-256 ${productionStripped.hash}`);
+console.log(`G9 production calling convention PASS: ${cases.length}/6 exact after stripping only 1.2 fields.`);
+console.log(`G9 no-q compatibility path PASS: ${cases.length}/6 byte-identical to the injected 1.2 interface.`);
+
+const observationCases = [
+  {
+    id: "response-404",
+    addresses: ["93.184.216.34"],
+    http: { mtaSts: notFound, robots: notFound, rdap: notFound },
+    expected: { mta_sts_policy: "checked", robots: "checked", rdap: "checked" },
+    calls: { mtaSts: 1, robots: 1, rdap: 1 },
+  },
+  {
+    id: "network-error",
+    addresses: ["93.184.216.34"],
+    http: { mtaSts: "throw", robots: "throw", rdap: "throw" },
+    expected: { mta_sts_policy: "unavailable", robots: "unavailable", rdap: "unavailable" },
+    calls: { mtaSts: 1, robots: 1, rdap: 1 },
+  },
+  {
+    id: "no-host-address",
+    addresses: [],
+    http: { mtaSts: notFound, robots: notFound, rdap: notFound },
+    expected: { mta_sts_policy: "unavailable", robots: "unavailable", rdap: "checked" },
+    calls: { mtaSts: 0, robots: 0, rdap: 1 },
+  },
+  {
+    id: "private-address",
+    addresses: ["10.0.0.5"],
+    http: { mtaSts: notFound, robots: notFound, rdap: notFound },
+    expected: { mta_sts_policy: "unavailable", robots: "unavailable", rdap: "checked" },
+    calls: { mtaSts: 0, robots: 0, rdap: 1 },
+  },
+  {
+    id: "mixed-public-private",
+    addresses: ["93.184.216.34", "10.0.0.5"],
+    http: { mtaSts: notFound, robots: notFound, rdap: notFound },
+    expected: { mta_sts_policy: "unavailable", robots: "unavailable", rdap: "checked" },
+    calls: { mtaSts: 0, robots: 0, rdap: 1 },
+  },
+  {
+    id: "shared-address-space",
+    addresses: ["100.64.0.1"],
+    http: { mtaSts: notFound, robots: notFound, rdap: notFound },
+    expected: { mta_sts_policy: "unavailable", robots: "unavailable", rdap: "checked" },
+    calls: { mtaSts: 0, robots: 0, rdap: 1 },
+  },
+];
+
+for (const spec of observationCases) {
+  const domain = `${spec.id}.test`;
+  const testCase = {
+    domain,
+    dns: {
+      [domain]: { A: spec.addresses, MX: [`10 mx.${domain}.`] },
+      [`mx.${domain}`]: { A: ["93.184.216.34"] },
+      [`_mta-sts.${domain}`]: { TXT: ["v=STSv1; id=observation"] },
+      [`mta-sts.${domain}`]: { A: spec.addresses },
+    },
+    http: spec.http,
+  };
+  const before = await withAmbientFixture(testCase, () => baseline.auditDomain(domain));
+  const after = await withAmbientFixture(testCase, () =>
+    canonical.createAuditEngine(canonical.createDefaultAdapters()).auditDomain(domain));
+  if (JSON.stringify(before.output) !== JSON.stringify(stripContract12(after.output))) {
+    throw new Error(`B3 ${spec.id}: findings changed after stripping 1.2 fields`);
+  }
+  if (JSON.stringify(after.output.observations) !== JSON.stringify(spec.expected)) {
+    throw new Error(`B3 ${spec.id}: observations ${JSON.stringify(after.output.observations)} (exp ${JSON.stringify(spec.expected)})`);
+  }
+  const actualCalls = Object.fromEntries(Object.keys(spec.calls).map((kind) =>
+    [kind, after.calls.filter((call) => call === kind).length]));
+  if (JSON.stringify(actualCalls) !== JSON.stringify(spec.calls)) {
+    throw new Error(`B3 ${spec.id}: HTTP calls ${JSON.stringify(actualCalls)} (exp ${JSON.stringify(spec.calls)})`);
+  }
+  console.log(`B3 PASS ${spec.id}: ${JSON.stringify(spec.expected)}, HTTP ${JSON.stringify(actualCalls)}`);
+}
+console.log(`B3 default-adapter observations PASS: ${observationCases.length}/6; refused domain-controlled rows made 0 HTTP fetches.`);
+
+// G10 proves the documented supplied-resolver result differs from the production
+// path. It does not detect a compatibility branch that re-enables ambient HTTP
+// under denied network; G3 is the independent guard for that regression.
+const trapCase = cases.find((testCase) => testCase.id === "mta-sts-valid");
+const offline = await canonical.auditDomain(trapCase.domain, resolver(trapCase.dns));
+const production = productionOutputs.get(trapCase.id);
+const offlineFinding = offline.findings.find((finding) => finding.area === "MTA-STS");
+const productionFinding = production.findings.find((finding) => finding.area === "MTA-STS");
+if (JSON.stringify(offline) === JSON.stringify(production)) throw new Error("G10 compatibility trap was not detected");
+if (offlineFinding?.title !== "MTA-STS TXT present but policy file not retrievable"
+  || productionFinding?.title !== "MTA-STS present (mode: enforce)") {
+  throw new Error(`G10 unexpected trap evidence: ${JSON.stringify({ offlineFinding, productionFinding })}`);
+}
+console.log(`G10 trap PASS: offline=[${offlineFinding.severity}] ${offlineFinding.title}; production=[${productionFinding.severity}] ${productionFinding.title}`);
 
 const dedupeCase = { domain: "dedupe.test", dns: { "dedupe.test": { A: ["203.0.113.20"] } }, http: {} };
 const dedupe = await withAmbientFixture(dedupeCase, async () => {

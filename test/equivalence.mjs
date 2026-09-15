@@ -12,10 +12,10 @@ if (!skillsDir || !baselinePath) {
 
 const baseline = await import(pathToFileURL(baselinePath).href);
 const canonical = await import(pathToFileURL(canonicalPath).href);
-if (canonical.contractVersion !== "1.1.0"
+if (canonical.contractVersion !== "1.2.0"
   || typeof canonical.createAuditEngine !== "function"
   || typeof canonical.createDefaultAdapters !== "function") {
-  throw new Error("canonical engine must export contractVersion=1.1.0, createAuditEngine(), and createDefaultAdapters()");
+  throw new Error("canonical engine must export contractVersion=1.2.0, createAuditEngine(), and createDefaultAdapters()");
 }
 
 const corpus = JSON.parse(readFileSync(`${skillsDir}/conformance/fixtures.json`, "utf8"));
@@ -227,10 +227,7 @@ function fixturePorts(spec, calls = []) {
   return {
     async mtaSts() { return take("mtaSts"); },
     async robots() { return take("robots"); },
-    async rdap() {
-      const value = take("rdap");
-      return value && value.status >= 200 && value.status < 300 ? value.data : null;
-    },
+    async rdap() { return take("rdap"); },
   };
 }
 
@@ -309,32 +306,62 @@ async function runCompatibility(testCase) {
   };
 }
 
+function stripContract12(result) {
+  const copy = structuredClone(result);
+  for (const finding of copy.audit.findings) delete finding.lane;
+  delete copy.audit.observations;
+  delete copy.score.lanes;
+  return copy;
+}
+
 async function compareCase(testCase) {
   const before = await runBaseline(testCase);
   const after = await runInjected(testCase);
   const compatibility = await runCompatibility(testCase);
   const beforeBytes = Buffer.from(JSON.stringify({ audit: before.audit, score: before.score }));
   const afterBytes = Buffer.from(JSON.stringify({ audit: after.audit, score: after.score }));
+  const strippedBytes = Buffer.from(JSON.stringify(stripContract12({ audit: after.audit, score: after.score })));
   const compatibilityBytes = Buffer.from(JSON.stringify(compatibility));
-  if (!beforeBytes.equals(afterBytes)) throw new Error(`${testCase.id}: baseline and injected outputs differ`);
+  if (!beforeBytes.equals(strippedBytes)) throw new Error(`${testCase.id}: baseline and injected outputs differ after stripping 1.2 fields`);
   if (!afterBytes.equals(compatibilityBytes)) throw new Error(`${testCase.id}: compatibility and injected outputs differ`);
   const hash = createHash("sha256").update(afterBytes).digest("hex");
   console.log(`PASS ${testCase.id}: ${afterBytes.length} bytes ${hash}`);
-  return afterBytes;
+  return { full: afterBytes, stripped: strippedBytes };
 }
 
 async function compareSet(set, label) {
-  const serialized = [];
-  for (const testCase of set) serialized.push(await compareCase(testCase), Buffer.from("\n"));
-  const aggregate = Buffer.concat(serialized);
-  const aggregateHash = createHash("sha256").update(aggregate).digest("hex");
-  console.log(`${label}: ${set.length} cases, ${aggregate.length} bytes, SHA-256 ${aggregateHash}`);
-  return { bytes: aggregate.length, hash: aggregateHash };
+  const full = [];
+  const stripped = [];
+  for (const testCase of set) {
+    const output = await compareCase(testCase);
+    full.push(output.full, Buffer.from("\n"));
+    stripped.push(output.stripped, Buffer.from("\n"));
+  }
+  const aggregate = Buffer.concat(full);
+  const strippedAggregate = Buffer.concat(stripped);
+  const result = {
+    bytes: aggregate.length,
+    hash: createHash("sha256").update(aggregate).digest("hex"),
+    strippedBytes: strippedAggregate.length,
+    strippedHash: createHash("sha256").update(strippedAggregate).digest("hex"),
+  };
+  console.log(`${label}: ${set.length} cases, ${result.bytes} bytes, SHA-256 ${result.hash}`);
+  console.log(`${label} stripped 1.2 fields: ${set.length} cases, ${result.strippedBytes} bytes, SHA-256 ${result.strippedHash}`);
+  return result;
 }
 
 const existing = await compareSet(cases, "Output equivalence PASS");
-if (existing.bytes !== 135826 || existing.hash !== "1ef6157758b414cc00c0c511a13f4e4f3bd253e71d019fc59d28bed7616cb6db") {
-  throw new Error(`existing 25-case aggregate changed: ${existing.bytes} bytes ${existing.hash}`);
+if (existing.bytes !== 150563 || existing.hash !== "4290835b94df8bb337c07bf9feec752dba1653d8e1b2274fead8229408d702ea") {
+  throw new Error(`contract 1.2 25-case aggregate changed: ${existing.bytes} bytes ${existing.hash}`);
 }
-await compareSet(boundaryCases, "Boundary equivalence PASS");
+if (existing.strippedBytes !== 135826 || existing.strippedHash !== "1ef6157758b414cc00c0c511a13f4e4f3bd253e71d019fc59d28bed7616cb6db") {
+  throw new Error(`existing stripped 25-case aggregate changed: ${existing.strippedBytes} bytes ${existing.strippedHash}`);
+}
+const boundary = await compareSet(boundaryCases, "Boundary equivalence PASS");
+if (boundary.bytes !== 50827 || boundary.hash !== "66b394b7545e98cf6d15e3d97435961258bf902ef1883d8f6aef5b4f1b451eab") {
+  throw new Error(`contract 1.2 boundary aggregate changed: ${boundary.bytes} bytes ${boundary.hash}`);
+}
+if (boundary.strippedBytes !== 46082 || boundary.strippedHash !== "e09d589e3e2ceb4a57c9a33c8b0bc08b61ba53fc244db49b2a799d2ee6488a18") {
+  throw new Error(`existing stripped boundary aggregate changed: ${boundary.strippedBytes} bytes ${boundary.strippedHash}`);
+}
 console.log("Compatibility exports PASS: byte-identical to injected interface for every existing and boundary case.");
