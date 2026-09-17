@@ -5,6 +5,8 @@ import { spawnSync } from "node:child_process";
 
 const enginePath = process.env.ENGINE || "src/engine.mjs";
 const source = readFileSync(enginePath, "utf8");
+const addressTestPath = "test/address-contract.mjs";
+const testSource = readFileSync(addressTestPath, "utf8");
 const dir = mkdtempSync(join(tmpdir(), "amino-engine-address-canary-"));
 
 function replaceOnce(input, anchor, replacement, label) {
@@ -13,22 +15,18 @@ function replaceOnce(input, anchor, replacement, label) {
   return input.replace(anchor, () => replacement);
 }
 
-function run(engine, skipEquality = false) {
-  return spawnSync(process.execPath, ["test/address-contract.mjs"], {
+function run(engine, testPath = addressTestPath) {
+  return spawnSync(process.execPath, [testPath], {
     cwd: process.cwd(),
-    env: {
-      ...process.env,
-      ENGINE: engine,
-      ...(skipEquality ? { SKIP_TABLE_EQUALITY: "1" } : {}),
-    },
+    env: { ...process.env, ENGINE: engine },
     encoding: "utf8",
   });
 }
 
-function prove(label, mutatedSource, diagnostic, skipEquality = false) {
+function prove(label, mutatedSource, diagnostic, testPath = addressTestPath) {
   const file = join(dir, `${label}.mjs`);
   writeFileSync(file, mutatedSource);
-  const result = run(file, skipEquality);
+  const result = run(file, testPath);
   const output = `${result.stdout || ""}\n${result.stderr || ""}`;
   if (result.error || result.status === null) throw new Error(`${label}: runner did not reach a verdict`);
   if (result.status === 0 || !output.includes(diagnostic)) {
@@ -40,7 +38,8 @@ function prove(label, mutatedSource, diagnostic, skipEquality = false) {
 try {
   const healthy = run(enginePath);
   const healthyOutput = `${healthy.stdout || ""}\n${healthy.stderr || ""}`;
-  if (healthy.status !== 0 || !healthyOutput.includes("ADDRESS rows PASS: 114/114")
+  if (healthy.status !== 0 || !healthyOutput.includes("ADDRESS table equality PASS: 4/4")
+      || !healthyOutput.includes("ADDRESS rows PASS: 114/114")
       || !healthyOutput.includes("DIFFERENTIAL PASS: 36/36")) {
     throw new Error(`S5 address healthy control failed\n${healthyOutput}`);
   }
@@ -54,11 +53,27 @@ try {
     "remove-224-table-entry",
   );
   prove("remove-224-table-entry-equality", multicastMutation, "ADDRESS table ipv4NonPublic differs from pinned skills contract");
+  const equalityBlock = testSource.slice(
+    testSource.indexOf("// ADDRESS_TABLE_EQUALITY_START"),
+    testSource.indexOf("// ADDRESS_TABLE_EQUALITY_END") + "// ADDRESS_TABLE_EQUALITY_END".length,
+  );
+  if (!equalityBlock.startsWith("// ADDRESS_TABLE_EQUALITY_START")
+      || !equalityBlock.endsWith("// ADDRESS_TABLE_EQUALITY_END")) {
+    throw new Error("remove-224-table-entry-row: equality block anchors were not found");
+  }
+  const rowOnlyTest = replaceOnce(
+    testSource,
+    equalityBlock,
+    "// Equality deliberately removed only in this detector-of-detector copy.",
+    "remove-224-table-entry-row-test-copy",
+  );
+  const rowOnlyTestPath = join(dir, "address-contract-row-only.mjs");
+  writeFileSync(rowOnlyTestPath, rowOnlyTest);
   prove(
     "remove-224-table-entry-row",
     multicastMutation,
     "ADDRESS row ipv4-multicast-start: expected refuse/0 robots calls, got allow/1",
-    true,
+    rowOnlyTestPath,
   );
 
   prove(

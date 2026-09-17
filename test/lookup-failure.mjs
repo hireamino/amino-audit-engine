@@ -23,7 +23,16 @@ async function runRow(spec) {
   globalThis.fetch = async (rawUrl) => {
     const url = new URL(String(rawUrl));
     if (url.hostname !== "cloudflare-dns.com") {
-      if (url.hostname === `mta-sts.${domain}`) policyFetches++;
+      if (url.hostname === `mta-sts.${domain}`) {
+        policyFetches++;
+        return {
+          status: 200,
+          ok: true,
+          headers: { get: () => "text/plain" },
+          async json() { return {}; },
+          async text() { return `version: STSv1\nmode: enforce\nmax_age: 86400\nmx: mx.${domain}\n`; },
+        };
+      }
       throw new Error(`unexpected HTTP fetch: ${url}`);
     }
     const name = url.searchParams.get("name");
@@ -31,10 +40,16 @@ async function runRow(spec) {
     if (name === `_mta-sts.${domain}` && rrtype === "TXT") {
       if (spec.lookup === "throw") throw new Error("fixture DNS transport failure");
       if (spec.lookup === "non-ok") return response(503, {});
-      return response(200, { Status: spec.lookup, AD: false, Answer: [] });
+      if (spec.lookup === "missing-status") return response(200, { AD: false, Answer: [] });
+      const rows = spec.txt ? [spec.txt] : [];
+      return response(200, {
+        Status: spec.lookup,
+        AD: false,
+        Answer: rows.map((data) => ({ type: RR.TXT, data: `"${data}"` })),
+      });
     }
     let rows = [];
-    if (name === domain && rrtype === "A") rows = ["93.184.216.34"];
+    if ((name === domain || name === `mta-sts.${domain}`) && rrtype === "A") rows = ["93.184.216.36"];
     if (name === domain && rrtype === "MX") rows = spec.nullMx ? ["0 ."] : [`10 mx.${domain}.`];
     if (name === domain && rrtype === "TXT") rows = ["v=spf1 -all"];
     if (name === `_dmarc.${domain}` && rrtype === "TXT") rows = ["v=DMARC1; p=reject"];
@@ -60,9 +75,11 @@ const rows = [
   { id: "status-1", lookup: 1, title: unableTitle, observation: "unavailable" },
   { id: "http-non-ok", lookup: "non-ok", title: unableTitle, observation: "unavailable" },
   { id: "fetch-throws", lookup: "throw", title: unableTitle, observation: "unavailable" },
+  { id: "missing-status", lookup: "missing-status", title: unableTitle, observation: "unavailable" },
   { id: "status-3", lookup: 3, title: absentTitle, observation: "not_applicable" },
   { id: "status-0-empty", lookup: 0, title: absentTitle, observation: "not_applicable" },
   { id: "null-mx-servfail", lookup: 2, title: "MTA-STS not applicable — domain receives no mail", observation: "not_applicable", nullMx: true },
+  { id: "status-0-present", lookup: 0, txt: "v=STSv1; id=positive", title: "MTA-STS present (mode: enforce)", observation: "checked", policyFetches: 1 },
 ];
 
 for (const spec of rows) {
@@ -74,10 +91,19 @@ for (const spec of rows) {
   if (audit.observations.mta_sts_policy !== spec.observation) {
     throw new Error(`S4 ${spec.id}: expected observation ${spec.observation}, got ${audit.observations.mta_sts_policy}`);
   }
-  if (policyFetches !== 0) throw new Error(`S4 ${spec.id}: expected 0 policy fetches, got ${policyFetches}`);
-  console.log(`S4 PASS ${spec.id}: "${finding.title}", ${spec.observation}, 0 policy fetches.`);
+  const expectedPolicyFetches = spec.policyFetches || 0;
+  if (policyFetches !== expectedPolicyFetches) {
+    throw new Error(`S4 ${spec.id}: expected ${expectedPolicyFetches} policy fetches, got ${policyFetches}`);
+  }
+  if (audit.inconclusive !== false) {
+    throw new Error(`S4 ${spec.id}: expected inconclusive false, got ${audit.inconclusive}`);
+  }
+  if (audit.inconclusive_reason !== null) {
+    throw new Error(`S4 ${spec.id}: expected inconclusive_reason null, got ${audit.inconclusive_reason}`);
+  }
+  console.log(`S4 PASS ${spec.id}: "${finding.title}", ${spec.observation}, ${expectedPolicyFetches} policy fetches, inconclusive=false/null.`);
 }
-console.log(`S4 default-adapter lookup outcomes PASS: ${rows.length}/8.`);
+console.log(`S4 default-adapter lookup outcomes PASS: ${rows.length}/10.`);
 
 const noMetaDomain = "no-meta.invalid";
 const noMeta = await engine.createAuditEngine({

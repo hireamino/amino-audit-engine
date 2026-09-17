@@ -34,10 +34,10 @@ function prove(label, mutatedSource, diagnostic) {
 try {
   const healthy = run(enginePath);
   const healthyOutput = `${healthy.stdout || ""}\n${healthy.stderr || ""}`;
-  if (healthy.status !== 0 || !healthyOutput.includes("S4 default-adapter lookup outcomes PASS: 8/8")) {
+  if (healthy.status !== 0 || !healthyOutput.includes("S4 default-adapter lookup outcomes PASS: 10/10")) {
     throw new Error(`S5 lookup healthy control failed\n${healthyOutput}`);
   }
-  console.log("S5 lookup healthy control PASS: S4 8/8.");
+  console.log("S5 lookup healthy control PASS: S4 10/10.");
 
   prove(
     "failure-treated-as-absence",
@@ -54,7 +54,25 @@ try {
     replaceOnce("![0, 3].includes(meta?.status)", "![0, 1, 3].includes(meta?.status)", "formerr-treated-as-authoritative"),
     'S4 status-1: expected title "Unable to confirm MTA-STS policy", got "No MTA-STS policy"',
   );
-  console.log("S5 lookup-failure canaries PASS: 3/3 named rows.");
+  prove(
+    "policy-fetched-on-lookup-failure",
+    replaceOnce(
+      "  if (lookup.failed) {\n    observations.mta_sts_policy = \"unavailable\";",
+      "  if (lookup.failed) {\n    await fetchMtaStsPolicy(domain, q, http, dns);\n    observations.mta_sts_policy = \"unavailable\";",
+      "policy-fetched-on-lookup-failure",
+    ),
+    "S4 status-2: expected 0 policy fetches, got 1",
+  );
+  prove(
+    "mta-sts-drives-inconclusive",
+    replaceOnce(
+      'for (const [n, t] of [[domain, "TXT"], ["_dmarc." + domain, "TXT"], [domain, "MX"]])',
+      'for (const [n, t] of [[domain, "TXT"], ["_dmarc." + domain, "TXT"], [domain, "MX"], ["_mta-sts." + domain, "TXT"]])',
+      "mta-sts-drives-inconclusive",
+    ),
+    "S4 status-2: expected inconclusive false, got true",
+  );
+  console.log("S5 lookup-failure canaries PASS: 5/5 named rows.");
 } finally {
   rmSync(dir, { recursive: true, force: true });
 }

@@ -14,20 +14,20 @@ if (!skillsDir) {
 const engine = await import(pathToFileURL(enginePath).href);
 const contract = JSON.parse(readFileSync(join(skillsDir, "conformance/address-contract.json"), "utf8"));
 const listKeys = ["ipv4NonPublic", "ipv6PublicWithin", "ipv6NonPublicWithinPublic", "ipv4MappedWithin"];
-if (process.env.SKIP_TABLE_EQUALITY !== "1") {
-  if (!Object.isFrozen(engine.addressContract)
-      || !listKeys.every((key) => Object.isFrozen(engine.addressContract?.[key]))) {
-    throw new Error("ADDRESS table and all four lists must be frozen");
-  }
-  for (const key of listKeys) {
-    try {
-      assert.deepEqual(engine.addressContract?.[key], contract[key]);
-    } catch {
-      throw new Error(`ADDRESS table ${key} differs from pinned skills contract`);
-    }
-  }
-  console.log(`ADDRESS table equality PASS: ${listKeys.length}/4 frozen lists match the pinned skills contract.`);
+// ADDRESS_TABLE_EQUALITY_START
+if (!Object.isFrozen(engine.addressContract)
+    || !listKeys.every((key) => Object.isFrozen(engine.addressContract?.[key]))) {
+  throw new Error("ADDRESS table and all four lists must be frozen");
 }
+for (const key of listKeys) {
+  try {
+    assert.deepEqual(engine.addressContract?.[key], contract[key]);
+  } catch {
+    throw new Error(`ADDRESS table ${key} differs from pinned skills contract`);
+  }
+}
+console.log(`ADDRESS table equality PASS: ${listKeys.length}/4 frozen lists match the pinned skills contract.`);
+// ADDRESS_TABLE_EQUALITY_END
 
 async function engineVerdict(addresses) {
   const domain = "address-contract.invalid";
@@ -124,10 +124,10 @@ for (let i = 0; i < differential.length; i++) {
 }
 console.log(`DIFFERENTIAL PASS: ${differential.length}/36 engine forms; Python agrees on 34/34 shared verdicts; 2/2 approved zone-ID differences observed.`);
 
-for (const address of [":1:2:3:4:5:6:7:8", "1:2:3:4:5:6:7:8:", "1::2:", ":1::2"]) {
+for (const address of [":1:2:3:4:5:6:7:8", "1:2:3:4:5:6:7:8:", "1::2:", ":1::2", "2606:4700:1:2::3:4:5:6"]) {
   const actual = await engineVerdict([address]);
   if (actual.verdict !== "refuse" || actual.robotsCalls !== 0) {
     throw new Error(`ADDRESS strict-colon ${address}: expected refuse/0 robots calls, got ${actual.verdict}/${actual.robotsCalls}`);
   }
 }
-console.log("ADDRESS strict-colon syntax PASS: 4/4 malformed single-colon forms refused through the real guard.");
+console.log("ADDRESS strict-colon syntax PASS: 5/5 malformed or zero-compression forms refused through the real guard.");
