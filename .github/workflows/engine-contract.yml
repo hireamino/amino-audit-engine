@@ -60,6 +60,8 @@ jobs:
         run: |
           SURFACE=web RUNNER="$SKILLS_DIR/conformance/run.mjs" EXPECT_FETCH_CALLS=0 node test/network-observe.mjs
           SURFACE=action RUNNER="$SKILLS_DIR/conformance/run.mjs" EXPECT_FETCH_CALLS=0 node test/network-observe.mjs
+      - name: G3 positive control — prove the network detector sees a compatibility regression
+        run: node test/network-observe-canary.mjs
       - name: G4 — prove all mutation canaries for both surfaces
         run: |
           SURFACE=web node "$SKILLS_DIR/conformance/canary.mjs"
@@ -72,6 +74,8 @@ jobs:
         run: node test/cache-lifetime-canary.mjs
       - name: B2 — prove each valid-but-wrong observation state goes red
         run: node test/observation-canary.mjs
+      - name: B3 — prove default-adapter edge mutations go red on named rows
+        run: node test/default-adapter-observation-canary.mjs
       - name: N2 — prove the expiry boundary canary
         run: node test/boundary-canary.mjs
       - name: G6 — prove the findings inventory

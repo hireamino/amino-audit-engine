@@ -104,7 +104,10 @@ function response(value, kind) {
     ok: status >= 200 && status < 300,
     headers: { get: (name) => name.toLowerCase() === "content-type" ? (value?.contentType || "") : null },
     async text() { return value?.body || ""; },
-    async json() { return kind === "rdap" ? value?.data : value; },
+    async json() {
+      if (value?.jsonError) throw new SyntaxError("invalid JSON fixture");
+      return kind === "rdap" ? value?.data : value;
+    },
   };
 }
 
@@ -293,13 +296,73 @@ const observationCases = [
     expected: { mta_sts_policy: "unavailable", robots: "unavailable", rdap: "checked" },
     calls: { mtaSts: 0, robots: 0, rdap: 1 },
   },
+  {
+    id: "mta-sts-invalid-policy",
+    addresses: ["93.184.216.34"],
+    http: { mtaSts: okText("not an MTA-STS policy"), robots: notFound, rdap: notFound },
+    expected: { mta_sts_policy: "checked", robots: "checked", rdap: "checked" },
+    calls: { mtaSts: 1, robots: 1, rdap: 1 },
+    requiredTitle: "MTA-STS policy is malformed",
+  },
+  {
+    id: "mta-sts-wrong-content-type",
+    addresses: ["93.184.216.34"],
+    http: {
+      mtaSts: {
+        status: 200,
+        contentType: "text/html",
+        body: "version: STSv1\nmode: enforce\nmx: mx.mta-sts-wrong-content-type.test\nmax_age: 86400\n",
+      },
+      robots: notFound,
+      rdap: notFound,
+    },
+    expected: { mta_sts_policy: "checked", robots: "checked", rdap: "checked" },
+    calls: { mtaSts: 1, robots: 1, rdap: 1 },
+    requiredTitle: "MTA-STS TXT present but policy file not retrievable",
+  },
+  {
+    id: "robots-non-robots-body",
+    addresses: ["93.184.216.34"],
+    http: {
+      mtaSts: notFound,
+      robots: { status: 200, body: "This is an ordinary HTML response, not robots directives." },
+      rdap: notFound,
+    },
+    expected: { mta_sts_policy: "checked", robots: "checked", rdap: "checked" },
+    calls: { mtaSts: 1, robots: 1, rdap: 1 },
+    forbiddenTitle: "robots.txt blocks AI crawlers",
+  },
+  {
+    id: "rdap-invalid-json",
+    addresses: ["93.184.216.34"],
+    http: { mtaSts: notFound, robots: notFound, rdap: { status: 200, jsonError: true } },
+    expected: { mta_sts_policy: "checked", robots: "checked", rdap: "checked" },
+    calls: { mtaSts: 1, robots: 1, rdap: 1 },
+    forbiddenArea: "Reputation",
+  },
+  {
+    id: "null-mx-mta-sts",
+    addresses: ["93.184.216.34"],
+    dns: (domain) => ({
+      [domain]: { A: ["93.184.216.34"], MX: ["0 ."] },
+      [`_mta-sts.${domain}`]: { TXT: ["v=STSv1; id=null-mx"] },
+      [`mta-sts.${domain}`]: { A: ["93.184.216.34"] },
+    }),
+    http: {
+      mtaSts: okText("version: STSv1\nmode: enforce\nmx: mx.null-mx-mta-sts.test\nmax_age: 86400\n"),
+      robots: notFound,
+      rdap: notFound,
+    },
+    expected: { mta_sts_policy: "not_applicable", robots: "checked", rdap: "checked" },
+    calls: { mtaSts: 0, robots: 1, rdap: 1 },
+  },
 ];
 
 for (const spec of observationCases) {
   const domain = `${spec.id}.test`;
   const testCase = {
     domain,
-    dns: {
+    dns: spec.dns ? spec.dns(domain) : {
       [domain]: { A: spec.addresses, MX: [`10 mx.${domain}.`] },
       [`mx.${domain}`]: { A: ["93.184.216.34"] },
       [`_mta-sts.${domain}`]: { TXT: ["v=STSv1; id=observation"] },
@@ -321,9 +384,18 @@ for (const spec of observationCases) {
   if (JSON.stringify(actualCalls) !== JSON.stringify(spec.calls)) {
     throw new Error(`B3 ${spec.id}: HTTP calls ${JSON.stringify(actualCalls)} (exp ${JSON.stringify(spec.calls)})`);
   }
+  if (spec.requiredTitle && !hasTitle(after.output, spec.requiredTitle)) {
+    throw new Error(`B3 ${spec.id}: expected finding title "${spec.requiredTitle}"`);
+  }
+  if (spec.forbiddenTitle && hasTitle(after.output, spec.forbiddenTitle)) {
+    throw new Error(`B3 ${spec.id}: unexpected finding title "${spec.forbiddenTitle}"`);
+  }
+  if (spec.forbiddenArea && after.output.findings.some((finding) => finding.area === spec.forbiddenArea)) {
+    throw new Error(`B3 ${spec.id}: unexpected ${spec.forbiddenArea} finding`);
+  }
   console.log(`B3 PASS ${spec.id}: ${JSON.stringify(spec.expected)}, HTTP ${JSON.stringify(actualCalls)}`);
 }
-console.log(`B3 default-adapter observations PASS: ${observationCases.length}/6; refused domain-controlled rows made 0 HTTP fetches.`);
+console.log(`B3 default-adapter observations PASS: ${observationCases.length}/11; refused domain-controlled rows made 0 HTTP fetches.`);
 
 // G10 proves the documented supplied-resolver result differs from the production
 // path. It does not detect a compatibility branch that re-enables ambient HTTP

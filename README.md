@@ -109,7 +109,7 @@ Run every contract gate with:
 npm test
 ```
 
-The test command fetches the pinned corpus and immutable extraction baseline when local copies are not provided. It proves source provenance, unchanged pre-1.2 output after stripping only the added metadata, the pinned full 1.2 aggregates, network denial, clock determinism, mutation-canary coverage, success- and failure-path output equivalence, boundary behavior, real default-adapter observation states, the production calling convention, the compatibility trap, DNS in-flight deduplication, findings inventory, compatibility exports, and ambient-I/O purity.
+The test command fetches the pinned corpus and immutable extraction baseline when local copies are not provided. It proves source provenance, unchanged pre-1.2 output after stripping only the added metadata, the pinned full 1.2 aggregates, network denial and its recurring fetch-positive control, clock determinism, mutation-canary coverage, success- and failure-path output equivalence, boundary behavior, real default-adapter observation states and their named mutation canaries, the production calling convention, the compatibility trap, DNS in-flight deduplication, findings inventory, compatibility exports, and ambient-I/O purity.
 
 ## Consumer and service boundary
 
