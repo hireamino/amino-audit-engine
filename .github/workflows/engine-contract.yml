@@ -62,6 +62,14 @@ jobs:
           SURFACE=action RUNNER="$SKILLS_DIR/conformance/run.mjs" EXPECT_FETCH_CALLS=0 node test/network-observe.mjs
       - name: G3 positive control — prove the network detector sees a compatibility regression
         run: node test/network-observe-canary.mjs
+      - name: S3 — prove the pinned public-address table through the real guard
+        run: node test/address-contract.mjs
+      - name: S5 address — prove strict parsing and range mutations go red
+        run: node test/address-contract-canary.mjs
+      - name: S4 — prove MTA-STS lookup outcomes through default adapters
+        run: node test/lookup-failure.mjs
+      - name: S5 lookup — prove absence and DNS failure cannot be conflated
+        run: node test/lookup-failure-canary.mjs
       - name: G4 — prove all mutation canaries for both surfaces
         run: |
           SURFACE=web node "$SKILLS_DIR/conformance/canary.mjs"

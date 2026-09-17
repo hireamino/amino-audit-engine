@@ -60,7 +60,24 @@ async function mapPool(items, limit, fn) {
 // Per-request cache (stores in-flight promises so concurrent checks dedupe).
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const contractVersion = "1.2.0";
+export const contractVersion = "1.3.0";
+
+// Frozen mirror of amino-skills/conformance/address-contract.json. CI proves
+// these four lists are deeply equal to the exact reviewed skills pin, keeping
+// the corpus table as the only editable source of address-policy truth.
+export const addressContract = Object.freeze({
+  ipv4NonPublic: Object.freeze([
+    "0.0.0.0/8", "10.0.0.0/8", "100.64.0.0/10", "127.0.0.0/8",
+    "169.254.0.0/16", "172.16.0.0/12", "192.0.0.0/24", "192.0.2.0/24",
+    "192.88.99.0/24", "192.168.0.0/16", "198.18.0.0/15", "198.51.100.0/24",
+    "203.0.113.0/24", "224.0.0.0/4", "240.0.0.0/4",
+  ]),
+  ipv6PublicWithin: Object.freeze(["2000::/3"]),
+  ipv6NonPublicWithinPublic: Object.freeze([
+    "2001::/23", "2001:db8::/32", "2002::/16", "3fff::/20",
+  ]),
+  ipv4MappedWithin: Object.freeze(["::ffff:0:0/96"]),
+});
 
 const AREA_LANES = Object.freeze({
   SPF: "outbound_auth",
@@ -214,6 +231,19 @@ async function firstTxt(name, prefix, q) {
   return null;
 }
 
+async function mtaStsTxtLookup(domain, q) {
+  const name = "_mta-sts." + domain;
+  const record = await firstTxt(name, "v=stsv1", q);
+  if (record || typeof q.meta !== "function") return { record, failed: false };
+  let meta;
+  try {
+    meta = await q.meta(name, "TXT");
+  } catch (e) {
+    return { record: null, failed: true };
+  }
+  return { record: null, failed: !!meta?.error || ![0, 3].includes(meta?.status) };
+}
+
 // A pragmatic subset of the Public Suffix List: registry suffixes where the
 // registrable domain is the last THREE labels, not two. Not exhaustive (the full PSL
 // is a ~200 KB data dependency); it fixes the cases that matter for same-org checks —
@@ -247,44 +277,74 @@ async function isVoid(name, q) {
 // Post-resolution check — DOMAIN_RE only validates syntax, so a public-looking
 // hostname can still point at 169.254.169.254 / 127.0.0.1 / 10.x etc.
 
-function isPublicIp(ip) {
-  ip = String(ip || "").trim().toLowerCase();
-  if (!ip) return false;
-  if (ip.includes(":")) {
-    // IPv6
-    if (ip === "::1" || ip === "::") return false;            // loopback / unspecified
-    // ::ffff:0:0/96 IPv4-mapped — unwrap and re-check as v4
-    const m = ip.match(/^::ffff:(?:0:)?([0-9a-f.:]+)$/);
-    if (m) {
-      const inner = m[1];
-      if (inner.includes(".")) return isPublicIp(inner);
-      // hex form ::ffff:7f00:1 → two 16-bit groups → dotted quad from the 32 bits
-      const grps = inner.split(":").filter(Boolean);
-      if (grps.length && grps.length <= 2 && grps.every((g) => /^[0-9a-f]{1,4}$/.test(g))) {
-        let n = 0;
-        for (const g of grps) n = (n << 16) | parseInt(g, 16);
-        n = n >>> 0;
-        return isPublicIp([(n >>> 24) & 255, (n >>> 16) & 255, (n >>> 8) & 255, n & 255].join("."));
-      }
-    }
-    const head = parseInt(ip.split(":")[0] || "0", 16);
-    if ((head & 0xfe00) === 0xfc00) return false;              // fc00::/7 ULA
-    if ((head & 0xffc0) === 0xfe80) return false;              // fe80::/10 link-local
-    return true;
+function parseIpv4Strict(text) {
+  if (!/^\d{1,3}(?:\.\d{1,3}){3}$/.test(text)) return null;
+  const octets = text.split(".");
+  if (octets.some((part) => (part.length > 1 && part.startsWith("0")) || Number(part) > 255)) return null;
+  return octets.reduce((value, part) => value * 256 + Number(part), 0) >>> 0;
+}
+
+function parseIpv6Strict(text) {
+  if (!text || text.includes("%") || text.includes("/") || text.includes("[") || text.includes("]")) return null;
+  let source = text.toLowerCase();
+  if (source.includes(".")) {
+    const split = source.lastIndexOf(":");
+    if (split < 0) return null;
+    const ipv4 = parseIpv4Strict(source.slice(split + 1));
+    if (ipv4 === null) return null;
+    source = source.slice(0, split + 1)
+      + ((ipv4 >>> 16) & 0xffff).toString(16) + ":" + (ipv4 & 0xffff).toString(16);
   }
-  // IPv4
-  const o = ip.split(".");
-  if (o.length !== 4) return false;
-  const b = o.map((x) => parseInt(x, 10));
-  if (b.some((x) => !Number.isInteger(x) || x < 0 || x > 255)) return false;
-  if (b[0] === 0) return false;                                // 0.0.0.0/8
-  if (b[0] === 127) return false;                              // loopback 127/8
-  if (b[0] === 10) return false;                               // private 10/8
-  if (b[0] === 172 && b[1] >= 16 && b[1] <= 31) return false;  // private 172.16/12
-  if (b[0] === 192 && b[1] === 168) return false;              // private 192.168/16
-  if (b[0] === 169 && b[1] === 254) return false;              // link-local 169.254/16
-  if (b[0] === 100 && b[1] >= 64 && b[1] <= 127) return false; // CGNAT 100.64/10
-  return true;
+  const compressed = source.indexOf("::");
+  if (compressed !== source.lastIndexOf("::")) return null;
+  const rawLeft = compressed < 0 ? source : source.slice(0, compressed);
+  const rawRight = compressed < 0 ? "" : source.slice(compressed + 2);
+  if (compressed < 0 && (rawLeft.startsWith(":") || rawLeft.endsWith(":"))) return null;
+  if (compressed >= 0
+      && ((rawLeft && (rawLeft.startsWith(":") || rawLeft.endsWith(":")))
+        || (rawRight && (rawRight.startsWith(":") || rawRight.endsWith(":"))))) return null;
+  const left = rawLeft.split(":").filter(Boolean);
+  const right = rawRight.split(":").filter(Boolean);
+  if (![...left, ...right].every((part) => /^[0-9a-f]{1,4}$/.test(part))) return null;
+  let groups;
+  if (compressed < 0) {
+    if (left.length !== 8) return null;
+    groups = left;
+  } else {
+    const fill = 8 - left.length - right.length;
+    if (fill < 1) return null;
+    groups = [...left, ...Array(fill).fill("0"), ...right];
+  }
+  let value = 0n;
+  for (const group of groups) value = (value << 16n) | BigInt(parseInt(group, 16));
+  return value;
+}
+
+function cidrContains(value, cidr, parser, width) {
+  const [rawBase, rawPrefix] = cidr.split("/");
+  const base = parser(rawBase);
+  const prefix = Number(rawPrefix);
+  if (base === null || !Number.isInteger(prefix) || prefix < 0 || prefix > width) return false;
+  const bits = BigInt(width - prefix);
+  return (BigInt(value) >> bits) === (BigInt(base) >> bits);
+}
+
+function isPublicIpv4(value) {
+  return !addressContract.ipv4NonPublic.some((cidr) => cidrContains(value, cidr, parseIpv4Strict, 32));
+}
+
+function isPublicIp(ip) {
+  const text = String(ip || "").trim().toLowerCase();
+  if (!text) return false;
+  const ipv4 = parseIpv4Strict(text);
+  if (ipv4 !== null) return isPublicIpv4(ipv4);
+  const ipv6 = parseIpv6Strict(text);
+  if (ipv6 === null) return false;
+  if (addressContract.ipv4MappedWithin.some((cidr) => cidrContains(ipv6, cidr, parseIpv6Strict, 128))) {
+    return isPublicIpv4(Number(ipv6 & 0xffffffffn));
+  }
+  return addressContract.ipv6PublicWithin.some((cidr) => cidrContains(ipv6, cidr, parseIpv6Strict, 128))
+    && !addressContract.ipv6NonPublicWithinPublic.some((cidr) => cidrContains(ipv6, cidr, parseIpv6Strict, 128));
 }
 
 // True only if the host resolves AND every resolved A/AAAA address is public.
@@ -724,8 +784,15 @@ async function checkMtaSts(domain, F, q, http, dns, observations) {
     observations.mta_sts_policy = "not_applicable";
     return;
   }
-  const txt = await firstTxt("_mta-sts." + domain, "v=stsv1", q);
-  if (!txt) {
+  const lookup = await mtaStsTxtLookup(domain, q);
+  if (lookup.failed) {
+    observations.mta_sts_policy = "unavailable";
+    F.push({ area: "MTA-STS", severity: "low", title: "Unable to confirm MTA-STS policy",
+      detail: "The DNS lookup for the _mta-sts record failed, so we could not tell whether an MTA-STS policy is published. This is not a finding that the policy is missing.",
+      fix: "Re-run the check. If it keeps failing, confirm your DNS provider answers TXT queries for _mta-sts.<domain>." });
+    return;
+  }
+  if (!lookup.record) {
     observations.mta_sts_policy = "not_applicable";
     F.push({ area: "MTA-STS", severity: "medium", title: "No MTA-STS policy",
       detail: "MTA-STS lets you require TLS for inbound SMTP and is part of a modern transport posture (and increasingly asked for in EU procurement, and specified in BSI's guidance for secure email transport (TR-03108)). Absent it, downgrade attacks on mail-in-transit are possible.",
@@ -1095,6 +1162,7 @@ function action(f) {
     return "Strengthen the DMARC policy";
   }
   if (a === "MTA-STS") {
+    if (t.includes("unable to confirm")) return "Re-check the MTA-STS DNS record";
     if (t.includes("does not cover all mx")) return "Fix MTA-STS mx: entries to match your MX";
     if (t.includes("max_age")) return "Set a valid MTA-STS max_age";
     return "Publish an MTA-STS policy";
@@ -1226,7 +1294,8 @@ async function bucketsWithQuery(domain, q) {
     r.TLS_RPT = null;
     r.DANE = null;
   } else {
-    r.MTA_STS = !!(await firstTxt("_mta-sts." + domain, "v=stsv1", q));
+    const mtaSts = await mtaStsTxtLookup(domain, q);
+    r.MTA_STS = mtaSts.failed ? null : !!mtaSts.record;
     r.TLS_RPT = !!(await firstTxt("_smtp._tls." + domain, "v=tlsrptv1", q));
   }
   const realMx = realMxRows(mx);

@@ -28,6 +28,11 @@ done
 SKILLS_DIR="$SKILLS_DIR" RUNNER="$SKILLS_DIR/conformance/run.mjs" ENGINE="$ENGINE" \
   node "$ROOT/test/network-observe-canary.mjs"
 
+SKILLS_DIR="$SKILLS_DIR" ENGINE="$ENGINE" node "$ROOT/test/address-contract.mjs"
+SKILLS_DIR="$SKILLS_DIR" ENGINE="$ENGINE" node "$ROOT/test/address-contract-canary.mjs"
+ENGINE="$ENGINE" node "$ROOT/test/lookup-failure.mjs"
+ENGINE="$ENGINE" node "$ROOT/test/lookup-failure-canary.mjs"
+
 PARITY_PY="$SKILLS_DIR/amino-deliverability-audit/skills/amino-deliverability-audit/scripts/audit.py" \
   PARITY_JS="$ENGINE" node "$SKILLS_DIR/web-parity/inventory.mjs"
 
@@ -46,4 +51,4 @@ SKILLS_DIR="$SKILLS_DIR" BASELINE_ENGINE="$BASELINE_ENGINE" ENGINE="$ENGINE" \
 node "$ROOT/test/ssrf.mjs"
 ENGINE="$ENGINE" node "$ROOT/test/purity.mjs"
 
-echo "ALL CONTRACT 1.2 GATES PASS"
+echo "ALL CONTRACT 1.3 GATES PASS"

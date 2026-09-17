@@ -20,7 +20,7 @@ if (occurrences !== 1) {
   throw new Error(`E1 compatibility HTTP mutation anchor must occur exactly once, got ${occurrences}`);
 }
 
-function run(engine) {
+function run(engine, expectedFetchCalls = 0) {
   return spawnSync(process.execPath, [observer], {
     cwd: process.cwd(),
     env: {
@@ -28,7 +28,7 @@ function run(engine) {
       RUNNER: runner,
       ENGINE: engine,
       SURFACE: "action",
-      EXPECT_FETCH_CALLS: "0",
+      EXPECT_FETCH_CALLS: String(expectedFetchCalls),
     },
     encoding: "utf8",
   });
@@ -52,6 +52,15 @@ try {
     throw new Error(`E1 healthy control expected exit 0 and 0 fetches, got exit ${healthyResult.status} and ${healthy.fetches}`);
   }
   console.log(`E1 healthy PASS: Network observation: ${healthy.fetches} fetch attempts, ${healthy.distinct} distinct URLs.`);
+
+  const countControlResult = run(enginePath, 1);
+  const countControl = observation(countControlResult, "S6 expected-count control");
+  const countDiagnostic = "FAIL network observation: runner=0, expected 1 fetch calls, got 0";
+  if (countControlResult.status === 0 || countControl.fetches !== 0
+      || !countControl.combined.includes(countDiagnostic)) {
+    throw new Error(`S6 expected-count control did not fail on the count alone\n${countControl.combined}`);
+  }
+  console.log(`S6 expected-count PASS: ${countDiagnostic}.`);
 
   const mutatedPath = join(dir, "compatibility-http-bypass.mjs");
   writeFileSync(mutatedPath, source.replace(anchor, () => replacement));

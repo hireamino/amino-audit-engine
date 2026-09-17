@@ -33,7 +33,7 @@ export async function handleAudit(domain) {
 }
 ```
 
-`contractVersion` is a string describing the adapter and exported-result contract. Contract 1.2.0 adds metadata fields while preserving every pre-existing finding field, score, ordering, and inconclusive result.
+`contractVersion` is a string describing the adapter and exported-result contract. Contract 1.3.0 retains the 1.2 metadata and adds two reviewed rules: DNS failure while looking up `_mta-sts` is distinct from authoritative absence, and every domain-controlled HTTP host is checked against the strict public-address table pinned from `amino-skills`.
 
 ### Result metadata
 
@@ -49,7 +49,7 @@ observations: {
 }
 ```
 
-`checked` means the purpose-specific HTTP port returned a response of any status, including 404, malformed content, or a wrong content type. `unavailable` means no response: the port returned `null`, threw or timed out, or the existing address guard refused the domain-controlled host. A host with no address, any private address, mixed public and private addresses, or shared address space such as `100.64.0.0/10` is refused and therefore unavailable. `not_applicable` means the prerequisite is absent; for MTA-STS this is a true null MX or no advertised `_mta-sts` TXT. DNS `inconclusive` remains a separate, unchanged result.
+`checked` means the purpose-specific HTTP port returned a response of any status, including 404, malformed content, or a wrong content type. `unavailable` means no response: the port returned `null`, threw or timed out, the address guard refused the domain-controlled host, or the `_mta-sts` TXT lookup failed. `not_applicable` means the prerequisite is authoritatively absent; for MTA-STS this is a true null MX, NXDOMAIN, or NOERROR with no advertised TXT. DNS `inconclusive` remains a separate, unchanged result driven only by critical SPF/DMARC/MX lookups.
 
 `buckets()` remains a flat score object and adds a `lanes` map for its nine scored buckets. Its values use the same lane enum.
 
@@ -68,7 +68,7 @@ HTTP operations are purpose-specific instead of exposing an arbitrary fetch prim
 - `robots(domain, dns) -> Promise<{status, body} | null>`
 - `rdap(domain) -> Promise<{status, data} | object | null>`
 
-The engine retains the post-resolution `resolvesPublic()` SSRF guard and invokes it before calling either domain-controlled HTTP port (`mtaSts` or `robots`). Host adapters own transport, redirect and timeout policy and return normalized responses; the engine consistently enforces accepted status, content type, and response-size limits. RDAP uses a fixed provider host and receives an encoded domain from the default adapter. The default RDAP adapter returns a status-carrying response for non-OK HTTP results (so a 404 is `checked` but emits no finding) and returns `null` only when no HTTP response was obtained.
+The engine retains the post-resolution `resolvesPublic()` SSRF guard and invokes it before calling either domain-controlled HTTP port (`mtaSts` or `robots`). Its four frozen network lists mirror `amino-skills/conformance/address-contract.json` at the exact pin, and CI proves deep equality and all 114 reviewed rows through the real guard. IPv4 and IPv6 are parsed strictly; malformed answers, special-use ranges, mixed public/non-public answers, prefixes, brackets, and zone IDs fail closed. Host adapters own transport, redirect and timeout policy and return normalized responses; the engine consistently enforces accepted status, content type, and response-size limits. RDAP uses a fixed provider host and receives an encoded domain from the default adapter. The default RDAP adapter returns a status-carrying response for non-OK HTTP results (so a 404 is `checked` but emits no finding) and returns `null` only when no HTTP response was obtained.
 
 ### Clock port
 
@@ -92,8 +92,9 @@ When `query` is omitted, `auditDomain()` and `buckets()` use `createDefaultAdapt
 
 ## Failure semantics
 
-Contract 1.2 preserves the existing fail-soft finding behavior while reporting observation state separately:
+Contract 1.3 preserves the existing fail-soft finding behavior while reporting observation state separately:
 
+- If no `v=STSv1` TXT record is obtained and `dns.meta()` reports `error`, SERVFAIL, REFUSED, FORMERR, or any status other than NOERROR (0) or NXDOMAIN (3), the engine reports “Unable to confirm MTA-STS policy”, sets the observation to `unavailable`, skips the policy fetch, and excludes `MTA_STS` from the gap. A true null MX takes precedence. With no `meta` port, the compatibility result remains authoritative absence.
 - A failed, rejected, incorrectly typed, or otherwise unusable MTA-STS response becomes `null` and produces the existing “policy file not retrievable” finding when the TXT record advertises a policy.
 - A failed RDAP request produces no domain-age or expiration finding.
 - A failed robots request produces no AI-crawler finding.
@@ -109,7 +110,7 @@ Run every contract gate with:
 npm test
 ```
 
-The test command fetches the pinned corpus and immutable extraction baseline when local copies are not provided. It proves source provenance, unchanged pre-1.2 output after stripping only the added metadata, the pinned full 1.2 aggregates, network denial and its recurring fetch-positive control, clock determinism, mutation-canary coverage, success- and failure-path output equivalence, boundary behavior, real default-adapter observation states and their named mutation canaries, the production calling convention, the compatibility trap, DNS in-flight deduplication, findings inventory, compatibility exports, and ambient-I/O purity.
+The test command fetches the pinned corpus and immutable extraction baseline when local copies are not provided. It proves source provenance, reviewed aggregate changes, network denial and both independent positive controls, clock determinism, mutation-canary coverage, success- and failure-path output equivalence, boundary behavior, default-adapter lookup outcomes, strict address-table equality and real-path rows, production calling conventions, compatibility behavior, DNS in-flight deduplication, findings inventory, compatibility exports, and ambient-I/O purity.
 
 ## Consumer and service boundary
 
