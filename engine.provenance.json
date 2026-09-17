@@ -1,5 +1,5 @@
 {
-  "contractVersion": "1.2.0",
+  "contractVersion": "1.3.0",
   "source": {
     "repository": "hireamino/amino-audit-action",
     "commit": "ae04a363f76da800ac6d98a3647cf5bf5ab7e44a",
@@ -11,7 +11,7 @@
   },
   "artifact": {
     "path": "src/engine.mjs",
-    "sha256": "bb38d87afe67ad40ec2b3a407bc8f3aa2f76a063a47338adc29dcf9aad0ac48d"
+    "sha256": "e73d3c79db8b92556ee804248efcbd1e2bb1a54eecc8f964e9b56aef0933c73d"
   },
   "allowedTransformations": [
     "remove unused route-only validation, escaping, and rate-limit constants from the extracted segment",
@@ -21,6 +21,8 @@
     "export the existing real DoH, HTTPS, and clock adapter factory as createDefaultAdapters",
     "add closed lane metadata to findings and scored buckets without changing existing fields",
     "add closed HTTP observation metadata over the existing ports and address guards",
-    "preserve non-OK RDAP responses as checked status-carrying responses without emitting findings"
+    "preserve non-OK RDAP responses as checked status-carrying responses without emitting findings",
+    "distinguish MTA-STS TXT lookup failure from authoritative absence through injected DNS metadata",
+    "embed the exact pinned public-address network lists and apply them with strict IPv4 and IPv6 parsing"
   ]
 }

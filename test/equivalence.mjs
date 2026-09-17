@@ -12,15 +12,23 @@ if (!skillsDir || !baselinePath) {
 
 const baseline = await import(pathToFileURL(baselinePath).href);
 const canonical = await import(pathToFileURL(canonicalPath).href);
-if (canonical.contractVersion !== "1.2.0"
+if (canonical.contractVersion !== "1.3.0"
   || typeof canonical.createAuditEngine !== "function"
   || typeof canonical.createDefaultAdapters !== "function") {
-  throw new Error("canonical engine must export contractVersion=1.2.0, createAuditEngine(), and createDefaultAdapters()");
+  throw new Error("canonical engine must export contractVersion=1.3.0, createAuditEngine(), and createDefaultAdapters()");
 }
 
 const corpus = JSON.parse(readFileSync(`${skillsDir}/conformance/fixtures.json`, "utf8"));
+const aggregateCorpusIds = new Set([
+  "dkim-revoked-empty-p", "dkim-ed25519-badlen", "dkim-rsa-good", "dkim-rsa1024-weak",
+  "dmarc-banana-invalid", "dmarc-uppercase-tags", "dmarc-none-monitor", "dmarc-multiple-void",
+  "dmarc-subdomain-treewalk", "spf-dash-all-uppercase", "spf-over-10-lookups",
+  "dane-unvalidated-tlsa", "dane-validated-tlsa", "dnssec-signed-zonecut", "dnssec-unsigned",
+  "null-mx-not-applicable", "no-mx-not-exempt", "bimi-present-without-vmc",
+  "ambiguous-null-mx-not-exempt",
+]);
 const corpusCases = corpus.fixtures
-  .filter((fixture) => fixture.mode === "dns-engine")
+  .filter((fixture) => aggregateCorpusIds.has(fixture.id))
   .map((fixture) => ({
     id: `corpus-${fixture.id}`,
     domain: fixture.input.domain,
@@ -28,15 +36,15 @@ const corpusCases = corpus.fixtures
     http: { mtaSts: "throw", robots: "throw", rdap: "throw" },
   }));
 
-const publicA = ["203.0.113.10"];
+const publicA = ["93.184.216.34"];
 const baseDns = (domain) => ({
   [domain]: { A: publicA, MX: [`10 mx.${domain}.`] },
-  [`mx.${domain}`]: { A: ["203.0.113.11"] },
+  [`mx.${domain}`]: { A: ["93.184.216.35"] },
 });
 const mtaDns = (domain) => ({
   ...baseDns(domain),
   [`_mta-sts.${domain}`]: { TXT: ["v=STSv1; id=20260913"] },
-  [`mta-sts.${domain}`]: { A: ["203.0.113.12"] },
+  [`mta-sts.${domain}`]: { A: ["93.184.216.36"] },
 });
 const okText = (body) => ({ status: 200, contentType: "text/plain; charset=utf-8", body });
 const notFound = { status: 404, contentType: "text/plain", body: "" };
@@ -351,17 +359,17 @@ async function compareSet(set, label) {
 }
 
 const existing = await compareSet(cases, "Output equivalence PASS");
-if (existing.bytes !== 150563 || existing.hash !== "4290835b94df8bb337c07bf9feec752dba1653d8e1b2274fead8229408d702ea") {
-  throw new Error(`contract 1.2 25-case aggregate changed: ${existing.bytes} bytes ${existing.hash}`);
+if (existing.bytes !== 150567 || existing.hash !== "814ac1e617a9ae797eddfb24b9dfafa10d2e03bcdfe89b8b9f35677d3215ed34") {
+  throw new Error(`contract 1.3 25-case aggregate changed: ${existing.bytes} bytes ${existing.hash}`);
 }
-if (existing.strippedBytes !== 135826 || existing.strippedHash !== "1ef6157758b414cc00c0c511a13f4e4f3bd253e71d019fc59d28bed7616cb6db") {
+if (existing.strippedBytes !== 135830 || existing.strippedHash !== "35da36bc088cfbb17da77aebf687dbb40dcfb14b4888357cfed2487bfc2d23a7") {
   throw new Error(`existing stripped 25-case aggregate changed: ${existing.strippedBytes} bytes ${existing.strippedHash}`);
 }
 const boundary = await compareSet(boundaryCases, "Boundary equivalence PASS");
-if (boundary.bytes !== 50827 || boundary.hash !== "66b394b7545e98cf6d15e3d97435961258bf902ef1883d8f6aef5b4f1b451eab") {
-  throw new Error(`contract 1.2 boundary aggregate changed: ${boundary.bytes} bytes ${boundary.hash}`);
+if (boundary.bytes !== 50831 || boundary.hash !== "ee8d3b8d5a6dc7f927d22100652e14f4a9db598b224e586a11aa41a38c019b5d") {
+  throw new Error(`contract 1.3 boundary aggregate changed: ${boundary.bytes} bytes ${boundary.hash}`);
 }
-if (boundary.strippedBytes !== 46082 || boundary.strippedHash !== "e09d589e3e2ceb4a57c9a33c8b0bc08b61ba53fc244db49b2a799d2ee6488a18") {
+if (boundary.strippedBytes !== 46086 || boundary.strippedHash !== "56bc7d0b2c0f9f714989769c018d6659bdbda3e83e25fe0dd1053b32397c9107") {
   throw new Error(`existing stripped boundary aggregate changed: ${boundary.strippedBytes} bytes ${boundary.strippedHash}`);
 }
 console.log("Compatibility exports PASS: byte-identical to injected interface for every existing and boundary case.");

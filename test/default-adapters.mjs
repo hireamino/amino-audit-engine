@@ -10,23 +10,23 @@ if (!baselinePath) {
 
 const baseline = await import(pathToFileURL(baselinePath).href);
 const canonical = await import(pathToFileURL(canonicalPath).href);
-if (canonical.contractVersion !== "1.2.0"
+if (canonical.contractVersion !== "1.3.0"
   || typeof canonical.createAuditEngine !== "function"
   || typeof canonical.createDefaultAdapters !== "function") {
-  throw new Error("contract 1.2.0 production adapter exports are required");
+  throw new Error("contract 1.3.0 production adapter exports are required");
 }
 
 const frozenNow = Date.parse("2026-09-13T00:00:00Z");
 const RR = { A: 1, NS: 2, PTR: 12, SOA: 6, MX: 15, TXT: 16, AAAA: 28, DNSKEY: 48, TLSA: 52, CAA: 257 };
-const publicA = ["203.0.113.10"];
+const publicA = ["93.184.216.34"];
 const baseDns = (domain) => ({
   [domain]: { A: publicA, MX: [`10 mx.${domain}.`] },
-  [`mx.${domain}`]: { A: ["203.0.113.11"] },
+  [`mx.${domain}`]: { A: ["93.184.216.35"] },
 });
 const mtaDns = (domain) => ({
   ...baseDns(domain),
   [`_mta-sts.${domain}`]: { TXT: ["v=STSv1; id=20260913"] },
-  [`mta-sts.${domain}`]: { A: ["203.0.113.12"] },
+  [`mta-sts.${domain}`]: { A: ["93.184.216.36"] },
 });
 const okText = (body) => ({ status: 200, contentType: "text/plain; charset=utf-8", body });
 const notFound = { status: 404, contentType: "text/plain", body: "" };
@@ -242,10 +242,10 @@ for (const testCase of cases) {
 }
 const productionFull = aggregate([...productionOutputs.values()]);
 const productionStripped = aggregate([...productionOutputs.values()].map(stripContract12));
-if (productionFull.bytes !== 36324 || productionFull.hash !== "abb345442d560e102ec1b0f4fc031fab88c3cb06a2bddc33f77a9d2f5df97ba7") {
-  throw new Error(`G9 contract 1.2 production aggregate changed: ${productionFull.bytes} bytes ${productionFull.hash}`);
+if (productionFull.bytes !== 36328 || productionFull.hash !== "922f040c12d8f8b9353bc14304fb8395868540489c01cbb3c8af1d2002ea59d9") {
+  throw new Error(`G9 contract 1.3 production aggregate changed: ${productionFull.bytes} bytes ${productionFull.hash}`);
 }
-if (productionStripped.bytes !== 34186 || productionStripped.hash !== "41cbc4629431f55345862f8cbf92668326cff3c8ef0b517cffd97259ffc9e6a4") {
+if (productionStripped.bytes !== 34190 || productionStripped.hash !== "cb58e9673671df513181db3fea6595e11d892498bf183a383f6ea1eba1a49d7e") {
   throw new Error(`G9 stripped production aggregate changed: ${productionStripped.bytes} bytes ${productionStripped.hash}`);
 }
 console.log(`G9 production aggregate: ${productionFull.bytes} bytes, SHA-256 ${productionFull.hash}`);
@@ -412,7 +412,7 @@ if (offlineFinding?.title !== "MTA-STS TXT present but policy file not retrievab
 }
 console.log(`G10 trap PASS: offline=[${offlineFinding.severity}] ${offlineFinding.title}; production=[${productionFinding.severity}] ${productionFinding.title}`);
 
-const dedupeCase = { domain: "dedupe.test", dns: { "dedupe.test": { A: ["203.0.113.20"] } }, http: {} };
+const dedupeCase = { domain: "dedupe.test", dns: { "dedupe.test": { A: ["93.184.216.37"] } }, http: {} };
 const dedupe = await withAmbientFixture(dedupeCase, async () => {
   const adapters = canonical.createDefaultAdapters();
   const first = adapters.dns.query("dedupe.test", "A");
