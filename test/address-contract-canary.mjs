@@ -39,11 +39,11 @@ try {
   const healthy = run(enginePath);
   const healthyOutput = `${healthy.stdout || ""}\n${healthy.stderr || ""}`;
   if (healthy.status !== 0 || !healthyOutput.includes("ADDRESS table equality PASS: 4/4")
-      || !healthyOutput.includes("ADDRESS rows PASS: 114/114")
+      || !healthyOutput.includes("ADDRESS rows PASS: 120/120")
       || !healthyOutput.includes("DIFFERENTIAL PASS: 36/36")) {
     throw new Error(`S5 address healthy control failed\n${healthyOutput}`);
   }
-  console.log("S5 address healthy control PASS: equality, 114 rows, and 36 differential forms.");
+  console.log("S5 address healthy control PASS: equality, 120 rows, and 36 differential forms with Python agreement.");
 
   const multicastAnchor = '    "203.0.113.0/24", "224.0.0.0/4", "240.0.0.0/4",';
   const multicastMutation = replaceOnce(
@@ -117,7 +117,7 @@ try {
       'function parseIpv6Strict(text) {\n  text = text.split("%")[0];\n  if (!text || text.includes("/") || text.includes("[") || text.includes("]")) return null;',
       "accept-zone-id",
     ),
-    "DIFFERENTIAL 2606:4700::1111%eth0: expected refuse/0 robots calls, got allow/1",
+    "ADDRESS row ipv6-zone-public-name: expected refuse/0 robots calls, got allow/1",
   );
   console.log("S5 address canaries PASS: 6/6 named gates (five mutations; table removal proved twice)." );
 } finally {

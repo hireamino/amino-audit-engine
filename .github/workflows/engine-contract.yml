@@ -70,6 +70,10 @@ jobs:
         run: node test/lookup-failure.mjs
       - name: S5 lookup — prove absence and DNS failure cannot be conflated
         run: node test/lookup-failure-canary.mjs
+      - name: C14 — prove website observation and strict RDAP rows
+        run: node test/contract-14.mjs
+      - name: C14 canaries — prove website and RDAP mutations go red
+        run: node test/contract-14-canary.mjs
       - name: G4 — prove all mutation canaries for both surfaces
         run: |
           SURFACE=web node "$SKILLS_DIR/conformance/canary.mjs"

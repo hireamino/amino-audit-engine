@@ -60,7 +60,7 @@ async function mapPool(items, limit, fn) {
 // Per-request cache (stores in-flight promises so concurrent checks dedupe).
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const contractVersion = "1.3.0";
+export const contractVersion = "1.4.0";
 
 // Frozen mirror of amino-skills/conformance/address-contract.json. CI proves
 // these four lists are deeply equal to the exact reviewed skills pin, keeping
@@ -88,10 +88,10 @@ const AREA_LANES = Object.freeze({
   Transport: "inbound_transport",
   MX: "inbound_transport",
   BIMI: "brand_optional",
-  CAA: "brand_optional",
-  DNSSEC: "outside_sending_posture",
+  CAA: "domain_posture",
+  DNSSEC: "domain_posture",
   "AI visibility": "outside_sending_posture",
-  Reputation: "outside_sending_posture",
+  Reputation: "domain_posture",
 });
 
 const BUCKET_LANES = Object.freeze({
@@ -231,6 +231,10 @@ async function firstTxt(name, prefix, q) {
   return null;
 }
 
+function dnsMetaFailed(meta) {
+  return !!meta?.error || ![0, 3].includes(meta?.status);
+}
+
 async function mtaStsTxtLookup(domain, q) {
   const name = "_mta-sts." + domain;
   const record = await firstTxt(name, "v=stsv1", q);
@@ -241,7 +245,7 @@ async function mtaStsTxtLookup(domain, q) {
   } catch (e) {
     return { record: null, failed: true };
   }
-  return { record: null, failed: !!meta?.error || ![0, 3].includes(meta?.status) };
+  return { record: null, failed: dnsMetaFailed(meta) };
 }
 
 // A pragmatic subset of the Public Suffix List: registry suffixes where the
@@ -347,14 +351,26 @@ function isPublicIp(ip) {
     && !addressContract.ipv6NonPublicWithinPublic.some((cidr) => cidrContains(ipv6, cidr, parseIpv6Strict, 128));
 }
 
-// True only if the host resolves AND every resolved A/AAAA address is public.
-// Fail-closed: no addresses, or any private/internal address → false.
-async function resolvesPublic(domain, env, q) {
+// One post-resolution guard for every domain-controlled HTTP host. It reports
+// why a host was refused so callers can distinguish authoritative no-address
+// evidence from lookup failure without duplicating the address-policy path.
+async function publicAddressState(domain, env, q) {
   q = q || makeResolver();
   const [a, aaaa] = await Promise.all([q(domain, "A"), q(domain, "AAAA")]);
   const ips = [...a, ...aaaa].map((x) => String(x).trim()).filter(Boolean);
-  if (!ips.length) return false;
-  return ips.every(isPublicIp);
+  if (!ips.length) {
+    if (typeof q.meta !== "function") return "lookup_failed";
+    try {
+      const [aMeta, aaaaMeta] = await Promise.all([
+        q.meta(domain, "A"), q.meta(domain, "AAAA"),
+      ]);
+      return dnsMetaFailed(aMeta) || dnsMetaFailed(aaaaMeta)
+        ? "lookup_failed" : "no_answers";
+    } catch (e) {
+      return "lookup_failed";
+    }
+  }
+  return ips.every(isPublicIp) ? "public" : "refused";
 }
 
 function mxHosts(mxRows) {
@@ -746,7 +762,7 @@ async function fetchMtaStsPolicy(domain, q, http, dns) {
   // Short timeout + size cap. redirect:"manual" — don't chase a redirect off-host.
   let res = null;
   try {
-    if (!(await resolvesPublic("mta-sts." + domain, null, q))) {
+    if ((await publicAddressState("mta-sts." + domain, null, q)) !== "public") {
       return { observation: "unavailable", policy: null };
     }
     res = await http.mtaSts(domain, dns);
@@ -969,8 +985,7 @@ async function checkDomainAge(domain, F, http, clock, observations) {
   const observation = response ? "checked" : "unavailable";
   observations.rdap = observation;
   if (!response) return;
-  const data = Object.prototype.hasOwnProperty.call(response, "data")
-    ? response.data : response;
+  const data = response.data;
   if (!data) return;                // no RDAP for this TLD / not found → say nothing
   const events = Array.isArray(data && data.events) ? data.events : [];
   const now = clock.nowMs();
@@ -1027,16 +1042,19 @@ function robotsBlocksAiBots(txt) {
 
 async function checkAiBots(domain, F, q, http, dns, observations) {
   let res = null;
+  let addressState = "lookup_failed";
   try {
     // SSRF: syntax validation alone cannot stop a host resolving to a private/metadata
     // address. Fail-closed (skip the check) if the post-resolution IP is not public.
-    if (await resolvesPublic(domain, null, q)) {
+    addressState = await publicAddressState(domain, null, q);
+    if (addressState === "public") {
       res = await http.robots(domain, dns);
     }
     // redirect:"manual" — the host is attacker-controllable, so don't chase a redirect
     // to an internal/metadata URL (defense-in-depth + parity with the skill's no-follow).
   } catch (e) { /* unavailable */ }
-  const observation = res ? "checked" : "unavailable";
+  const observation = res ? "checked"
+    : addressState === "no_answers" ? "not_applicable" : "unavailable";
   observations.robots = observation;
   if (!res || res.status < 200 || res.status >= 300) return; // no robots.txt / redirect → no finding
   const txt = String(res.body || "").slice(0, 20000);

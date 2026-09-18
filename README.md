@@ -33,11 +33,11 @@ export async function handleAudit(domain) {
 }
 ```
 
-`contractVersion` is a string describing the adapter and exported-result contract. Contract 1.3.0 retains the 1.2 metadata and adds two reviewed rules: DNS failure while looking up `_mta-sts` is distinct from authoritative absence, and every domain-controlled HTTP host is checked against the strict public-address table pinned from `amino-skills`.
+`contractVersion` is a string describing the adapter and exported-result contract. Contract 1.4.0 retains the 1.3 DNS and public-address rules and adds three reviewed rules: DNSSEC, Reputation, and CAA findings use the `domain_posture` lane; the website observation distinguishes authoritative absence from lookup failure and address refusal; and RDAP has one response shape, `{status, data} | null`.
 
 ### Result metadata
 
-Every `auditDomain()` finding carries a `lane` from the closed enum `outbound_auth | inbound_transport | brand_optional | outside_sending_posture`. SPF, DKIM, and DMARC are outbound authentication; MTA-STS, TLS-RPT, Transport, and MX are inbound transport; BIMI and CAA are optional brand controls; DNSSEC, AI visibility, and Reputation are outside sending posture. Reverse-DNS findings retain their `Transport` area but use `outside_sending_posture`. An unmapped area is a contract error and fails closed.
+Every `auditDomain()` finding carries a `lane` from the closed enum `outbound_auth | inbound_transport | domain_posture | brand_optional | outside_sending_posture`. SPF, DKIM, and DMARC are outbound authentication; MTA-STS, TLS-RPT, Transport, and MX are inbound transport; DNSSEC, Reputation, and CAA are domain posture; BIMI is an optional brand control; and AI visibility is outside sending posture. Reverse-DNS findings retain their `Transport` area but use `outside_sending_posture`. An unmapped area is a contract error and fails closed.
 
 Every audit result also carries exactly:
 
@@ -49,7 +49,7 @@ observations: {
 }
 ```
 
-`checked` means the purpose-specific HTTP port returned a response of any status, including 404, malformed content, or a wrong content type. `unavailable` means no response: the port returned `null`, threw or timed out, the address guard refused the domain-controlled host, or the `_mta-sts` TXT lookup failed. `not_applicable` means the prerequisite is authoritatively absent; for MTA-STS this is a true null MX, NXDOMAIN, or NOERROR with no advertised TXT. DNS `inconclusive` remains a separate, unchanged result driven only by critical SPF/DMARC/MX lookups.
+`checked` means the purpose-specific HTTP port returned a response of any status, including 404, malformed content, or a wrong content type. For the website/robots observation, authoritative NOERROR or NXDOMAIN metadata with no A/AAAA answers is `not_applicable`; a failed lookup, a missing `meta` port, a refused address, or a failed fetch is `unavailable`. MTA-STS deliberately keeps its existing rule: an advertised policy whose host has no usable address is `unavailable`, while a true null MX, NXDOMAIN, or NOERROR with no advertised TXT is `not_applicable`. RDAP is `checked` for any non-null wrapper and `unavailable` for `null`. DNS `inconclusive` remains a separate, unchanged result driven only by critical SPF/DMARC/MX lookups.
 
 `buckets()` remains a flat score object and adds a `lanes` map for its nine scored buckets. Its values use the same lane enum.
 
@@ -66,9 +66,9 @@ HTTP operations are purpose-specific instead of exposing an arbitrary fetch prim
 
 - `mtaSts(domain, dns) -> Promise<{status, contentType, body} | null>`
 - `robots(domain, dns) -> Promise<{status, body} | null>`
-- `rdap(domain) -> Promise<{status, data} | object | null>`
+- `rdap(domain) -> Promise<{status, data} | null>`
 
-The engine retains the post-resolution `resolvesPublic()` SSRF guard and invokes it before calling either domain-controlled HTTP port (`mtaSts` or `robots`). Its four frozen network lists mirror `amino-skills/conformance/address-contract.json` at the exact pin, and CI proves deep equality and all 114 reviewed rows through the real guard. IPv4 and IPv6 are parsed strictly; malformed answers, special-use ranges, mixed public/non-public answers, prefixes, brackets, and zone IDs fail closed. Host adapters own transport, redirect and timeout policy and return normalized responses; the engine consistently enforces accepted status, content type, and response-size limits. RDAP uses a fixed provider host and receives an encoded domain from the default adapter. The default RDAP adapter returns a status-carrying response for non-OK HTTP results (so a 404 is `checked` but emits no finding) and returns `null` only when no HTTP response was obtained.
+The engine retains one post-resolution `publicAddressState()` SSRF guard and invokes it before calling either domain-controlled HTTP port (`mtaSts` or `robots`). Its four frozen network lists mirror `amino-skills/conformance/address-contract.json` at the exact pin, and CI proves deep equality and all 120 reviewed rows through the real guard. IPv4 and IPv6 are parsed strictly; malformed answers, special-use ranges, mixed public/non-public answers, prefixes, brackets, and zone IDs fail closed. Python and JavaScript agree on all 36 differential forms, including refusing both zone-ID forms. Host adapters own transport, redirect and timeout policy and return normalized responses; the engine consistently enforces accepted status, content type, and response-size limits. RDAP uses a fixed provider host and receives an encoded domain from the default adapter. The default RDAP adapter returns a status-carrying wrapper for non-OK HTTP results (so a 404 is `checked` but emits no finding), returns `{status, data: null}` for malformed JSON after a response, and returns `null` only when no HTTP response was obtained.
 
 ### Clock port
 
@@ -92,11 +92,13 @@ When `query` is omitted, `auditDomain()` and `buckets()` use `createDefaultAdapt
 
 ## Failure semantics
 
-Contract 1.3 preserves the existing fail-soft finding behavior while reporting observation state separately:
+Contract 1.4 preserves the existing fail-soft finding behavior while reporting observation state separately:
 
 - If no `v=STSv1` TXT record is obtained and `dns.meta()` reports `error`, SERVFAIL, REFUSED, FORMERR, or any status other than NOERROR (0) or NXDOMAIN (3), the engine reports “Unable to confirm MTA-STS policy”, sets the observation to `unavailable`, skips the policy fetch, and excludes `MTA_STS` from the gap. A true null MX takes precedence. With no `meta` port, the compatibility result remains authoritative absence.
 - A failed, rejected, incorrectly typed, or otherwise unusable MTA-STS response becomes `null` and produces the existing “policy file not retrievable” finding when the TXT record advertises a policy.
-- A failed RDAP request produces no domain-age or expiration finding.
+- Website A/AAAA lookups consume the same authoritative-status rule as MTA-STS. Authoritative no-answer is `not_applicable`; lookup failure, missing metadata, refused answers, or a failed robots fetch is `unavailable`; any HTTP response is `checked`.
+- RDAP accepts only `{status, data}` or `null`. A bare object is not interpreted as registration data, and a failed RDAP request produces no domain-age or expiration finding.
+- DNSSEC, Reputation, and CAA findings use `domain_posture`; BIMI remains `brand_optional`, and the reverse-DNS title exception remains `outside_sending_posture`.
 - A failed robots request produces no AI-crawler finding.
 - DNS transport errors continue to drive the existing `inconclusive` fields through `dns.meta`.
 

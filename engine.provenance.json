@@ -1,5 +1,5 @@
 {
-  "contractVersion": "1.3.0",
+  "contractVersion": "1.4.0",
   "source": {
     "repository": "hireamino/amino-audit-action",
     "commit": "ae04a363f76da800ac6d98a3647cf5bf5ab7e44a",
@@ -11,7 +11,7 @@
   },
   "artifact": {
     "path": "src/engine.mjs",
-    "sha256": "e73d3c79db8b92556ee804248efcbd1e2bb1a54eecc8f964e9b56aef0933c73d"
+    "sha256": "978cd28742f3e5ab57293d76d8681fcb5ec3fa75d235929a05c19ac8db9e460e"
   },
   "allowedTransformations": [
     "remove unused route-only validation, escaping, and rate-limit constants from the extracted segment",
@@ -23,6 +23,9 @@
     "add closed HTTP observation metadata over the existing ports and address guards",
     "preserve non-OK RDAP responses as checked status-carrying responses without emitting findings",
     "distinguish MTA-STS TXT lookup failure from authoritative absence through injected DNS metadata",
-    "embed the exact pinned public-address network lists and apply them with strict IPv4 and IPv6 parsing"
+    "embed the exact pinned public-address network lists and apply them with strict IPv4 and IPv6 parsing",
+    "move DNSSEC, Reputation, and CAA findings to the closed domain_posture lane without changing scored-bucket lanes",
+    "report authoritative website no-address evidence as not_applicable while preserving lookup failure, address refusal, and fetch failure as unavailable through the single address guard",
+    "accept only the normalized {status, data} or null RDAP port shape and never infer registration data from a bare object"
   ]
 }
