@@ -64,7 +64,7 @@ for (const row of contract.rows) {
   if (row.expect === "allow") allowedRows++;
   else refusedRows++;
 }
-console.log(`ADDRESS rows PASS: ${contract.rows.length}/114 through createAuditEngine; allow=${allowedRows}, refuse=${refusedRows}, robots calls=${allowedRows}.`);
+console.log(`ADDRESS rows PASS: ${contract.rows.length}/120 through createAuditEngine; allow=${allowedRows}, refuse=${refusedRows}, robots calls=${allowedRows}.`);
 
 const differential = [
   ["::FFFF:7F00:1", "refuse"], ["01.2.3.4", "refuse"],
@@ -84,7 +84,7 @@ const differential = [
   ["2606:4700::0:1111", "allow"], ["2000::", "allow"],
   ["::ffff:0:0", "refuse"], ["1fff:ffff:ffff:ffff:ffff:ffff:ffff:ffff", "refuse"],
   ["::ffff:0.0.0.0", "refuse"], ["::ffff:1.0.0.0", "allow"],
-  ["2606:4700::1111%eth0", "refuse", "allow"], ["2606:4700::1111%1", "refuse", "allow"],
+  ["2606:4700::1111%eth0", "refuse"], ["2606:4700::1111%1", "refuse"],
 ];
 
 for (const [address, expected] of differential) {
@@ -122,7 +122,7 @@ for (let i = 0; i < differential.length; i++) {
     throw new Error(`DIFFERENTIAL Python ${address}: expected ${pythonExpected ? "allow" : "refuse"}, got ${pythonVerdicts[i] ? "allow" : "refuse"}`);
   }
 }
-console.log(`DIFFERENTIAL PASS: ${differential.length}/36 engine forms; Python agrees on 34/34 shared verdicts; 2/2 approved zone-ID differences observed.`);
+console.log(`DIFFERENTIAL PASS: ${differential.length}/36 engine forms; Python agrees on 36/36 shared verdicts; 0 approved differences.`);
 
 for (const address of [":1:2:3:4:5:6:7:8", "1:2:3:4:5:6:7:8:", "1::2:", ":1::2", "2606:4700:1:2::3:4:5:6"]) {
   const actual = await engineVerdict([address]);
