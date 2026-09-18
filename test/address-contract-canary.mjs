@@ -117,7 +117,7 @@ try {
       'function parseIpv6Strict(text) {\n  text = text.split("%")[0];\n  if (!text || text.includes("/") || text.includes("[") || text.includes("]")) return null;',
       "accept-zone-id",
     ),
-    "DIFFERENTIAL 2606:4700::1111%eth0: expected refuse/0 robots calls, got allow/1",
+    "ADDRESS row ipv6-zone-public-name: expected refuse/0 robots calls, got allow/1",
   );
   console.log("S5 address canaries PASS: 6/6 named gates (five mutations; table removal proved twice)." );
 } finally {
