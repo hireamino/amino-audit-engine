@@ -74,6 +74,10 @@ jobs:
         run: node test/contract-14.mjs
       - name: C14 canaries — prove website and RDAP mutations go red
         run: node test/contract-14-canary.mjs
+      - name: C15 — prove thrown address metadata stays unavailable
+        run: node test/contract-15.mjs
+      - name: C15 canary — prove thrown metadata cannot become authoritative absence
+        run: node test/contract-15-canary.mjs
       - name: G4 — prove all mutation canaries for both surfaces
         run: |
           SURFACE=web node "$SKILLS_DIR/conformance/canary.mjs"
