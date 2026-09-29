@@ -33,7 +33,7 @@ export async function handleAudit(domain) {
 }
 ```
 
-`contractVersion` is a string describing the adapter and exported-result contract. Contract 1.4.0 retains the 1.3 DNS and public-address rules and adds three reviewed rules: DNSSEC, Reputation, and CAA findings use the `domain_posture` lane; the website observation distinguishes authoritative absence from lookup failure and address refusal; and RDAP has one response shape, `{status, data} | null`.
+`contractVersion` is a string describing the adapter and exported-result contract. Contract 1.5.0 retains the 1.4 lane, observation, and RDAP rules and makes the critical-lookup result obey the shared DNS-failure rule: only NOERROR (0) and NXDOMAIN (3) are conclusive; FORMERR, SERVFAIL, NOTIMP, REFUSED, other RCODEs, and transport errors make the result inconclusive. Status 2 and 5 retain the `SERVFAIL/REFUSED` reason; every other failure uses `lookup error`.
 
 ### Result metadata
 
@@ -92,15 +92,16 @@ When `query` is omitted, `auditDomain()` and `buckets()` use `createDefaultAdapt
 
 ## Failure semantics
 
-Contract 1.4 preserves the existing fail-soft finding behavior while reporting observation state separately:
+Contract 1.5 preserves the existing fail-soft finding behavior while reporting observation state separately:
 
 - If no `v=STSv1` TXT record is obtained and `dns.meta()` reports `error`, SERVFAIL, REFUSED, FORMERR, or any status other than NOERROR (0) or NXDOMAIN (3), the engine reports “Unable to confirm MTA-STS policy”, sets the observation to `unavailable`, skips the policy fetch, and excludes `MTA_STS` from the gap. A true null MX takes precedence. With no `meta` port, the compatibility result remains authoritative absence.
 - A failed, rejected, incorrectly typed, or otherwise unusable MTA-STS response becomes `null` and produces the existing “policy file not retrievable” finding when the TXT record advertises a policy.
 - Website A/AAAA lookups consume the same authoritative-status rule as MTA-STS. Authoritative no-answer is `not_applicable`; lookup failure, missing metadata, refused answers, or a failed robots fetch is `unavailable`; any HTTP response is `checked`.
+- If an A/AAAA metadata call or the shared address guard throws, the website observation remains `unavailable` and the robots port is not called; an exception is never treated as authoritative absence.
 - RDAP accepts only `{status, data}` or `null`. A bare object is not interpreted as registration data, and a failed RDAP request produces no domain-age or expiration finding.
 - DNSSEC, Reputation, and CAA findings use `domain_posture`; BIMI remains `brand_optional`, and the reverse-DNS title exception remains `outside_sending_posture`.
 - A failed robots request produces no AI-crawler finding.
-- DNS transport errors continue to drive the existing `inconclusive` fields through `dns.meta`.
+- Critical apex TXT, `_dmarc` TXT, and apex MX metadata are checked in that order. Only status 0 and 3 are conclusive; the first other status or transport error drives `inconclusive=true` and names the lookup in `inconclusive_reason`. Non-critical lookups never drive the flag.
 
 ## Product contract
 

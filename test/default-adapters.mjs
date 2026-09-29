@@ -10,10 +10,10 @@ if (!baselinePath) {
 
 const baseline = await import(pathToFileURL(baselinePath).href);
 const canonical = await import(pathToFileURL(canonicalPath).href);
-if (canonical.contractVersion !== "1.4.0"
+if (canonical.contractVersion !== "1.5.0"
   || typeof canonical.createAuditEngine !== "function"
   || typeof canonical.createDefaultAdapters !== "function") {
-  throw new Error("contract 1.4.0 production adapter exports are required");
+  throw new Error("contract 1.5.0 production adapter exports are required");
 }
 
 const frozenNow = Date.parse("2026-09-13T00:00:00Z");
@@ -243,7 +243,7 @@ for (const testCase of cases) {
 const productionFull = aggregate([...productionOutputs.values()]);
 const productionStripped = aggregate([...productionOutputs.values()].map(stripContract12));
 if (productionFull.bytes !== 36262 || productionFull.hash !== "2d35ba2e612eb340d8414a10f7f73fab13e017790b338f75c9fff5c220a49f20") {
-  throw new Error(`G9 contract 1.4 production aggregate changed: ${productionFull.bytes} bytes ${productionFull.hash}`);
+  throw new Error(`G9 contract 1.5 production aggregate changed: ${productionFull.bytes} bytes ${productionFull.hash}`);
 }
 if (productionStripped.bytes !== 34190 || productionStripped.hash !== "cb58e9673671df513181db3fea6595e11d892498bf183a383f6ea1eba1a49d7e") {
   throw new Error(`G9 stripped production aggregate changed: ${productionStripped.bytes} bytes ${productionStripped.hash}`);

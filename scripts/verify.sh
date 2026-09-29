@@ -34,6 +34,8 @@ ENGINE="$ENGINE" node "$ROOT/test/lookup-failure.mjs"
 ENGINE="$ENGINE" node "$ROOT/test/lookup-failure-canary.mjs"
 ENGINE="$ENGINE" node "$ROOT/test/contract-14.mjs"
 ENGINE="$ENGINE" node "$ROOT/test/contract-14-canary.mjs"
+ENGINE="$ENGINE" node "$ROOT/test/contract-15.mjs"
+ENGINE="$ENGINE" node "$ROOT/test/contract-15-canary.mjs"
 
 PARITY_PY="$SKILLS_DIR/amino-deliverability-audit/skills/amino-deliverability-audit/scripts/audit.py" \
   PARITY_JS="$ENGINE" node "$SKILLS_DIR/web-parity/inventory.mjs"
@@ -53,4 +55,4 @@ SKILLS_DIR="$SKILLS_DIR" BASELINE_ENGINE="$BASELINE_ENGINE" ENGINE="$ENGINE" \
 node "$ROOT/test/ssrf.mjs"
 ENGINE="$ENGINE" node "$ROOT/test/purity.mjs"
 
-echo "ALL CONTRACT 1.4 GATES PASS"
+echo "ALL CONTRACT 1.5 GATES PASS"

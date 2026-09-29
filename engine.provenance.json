@@ -1,5 +1,5 @@
 {
-  "contractVersion": "1.4.0",
+  "contractVersion": "1.5.0",
   "source": {
     "repository": "hireamino/amino-audit-action",
     "commit": "ae04a363f76da800ac6d98a3647cf5bf5ab7e44a",
@@ -11,7 +11,7 @@
   },
   "artifact": {
     "path": "src/engine.mjs",
-    "sha256": "978cd28742f3e5ab57293d76d8681fcb5ec3fa75d235929a05c19ac8db9e460e"
+    "sha256": "237f2b5e8312f9a8991592e448713c8ccf7af57985de8e76e35619ae69f8ccbb"
   },
   "allowedTransformations": [
     "remove unused route-only validation, escaping, and rate-limit constants from the extracted segment",
@@ -26,6 +26,7 @@
     "embed the exact pinned public-address network lists and apply them with strict IPv4 and IPv6 parsing",
     "move DNSSEC, Reputation, and CAA findings to the closed domain_posture lane without changing scored-bucket lanes",
     "report authoritative website no-address evidence as not_applicable while preserving lookup failure, address refusal, and fetch failure as unavailable through the single address guard",
-    "accept only the normalized {status, data} or null RDAP port shape and never infer registration data from a bare object"
+    "accept only the normalized {status, data} or null RDAP port shape and never infer registration data from a bare object",
+    "reuse the shared DNS metadata failure classifier for critical TXT and MX lookups and select the inconclusive reason by RCODE"
   ]
 }
