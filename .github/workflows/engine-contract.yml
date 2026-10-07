@@ -48,6 +48,10 @@ jobs:
           node-version: 20
       - name: Fetch exact reviewed-answer contract
         run: scripts/fetch-pinned-skills.sh "$SKILLS_DIR"
+      - name: WHI-221 — prove the skills pin satisfies the declared contract
+        run: node scripts/verify-skills-pin-contract.mjs
+      - name: WHI-221 canaries — prove the skills pin gate fails closed
+        run: node test/skills-pin-contract-canary.mjs
       - name: Fetch immutable extraction baseline
         run: scripts/fetch-source-baseline.sh "$BASELINE_DIR"
       - name: G1 — prove source and artifact provenance
