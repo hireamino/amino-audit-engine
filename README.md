@@ -105,7 +105,7 @@ Contract 1.5 preserves the existing fail-soft finding behavior while reporting o
 
 ## Product contract
 
-The reviewed corpus in the exact-SHA-pinned [`hireamino/amino-skills`](https://github.com/hireamino/amino-skills) repository is the product contract. If this engine and that corpus disagree, the engine is wrong. CI therefore runs the unchanged corpus and all mutation canaries for both shipping JavaScript surface labels.
+The reviewed corpus in the exact-SHA-pinned [`hireamino/amino-skills`](https://github.com/hireamino/amino-skills) repository is the product contract. If this engine and that corpus disagree, the engine is wrong. [`contracts/skills-corpus-requirements.json`](contracts/skills-corpus-requirements.json) maps each declared engine contract version to the named corpus rows that must exist at that exact pin. CI fails closed when the version is unknown, its requirement set is empty, the checked-out skills revision differs from the pin, or any required row is missing. CI then runs the unchanged corpus and all mutation canaries for both shipping JavaScript surface labels.
 
 Run every contract gate with:
 
@@ -113,7 +113,7 @@ Run every contract gate with:
 npm test
 ```
 
-The test command fetches the pinned corpus and immutable extraction baseline when local copies are not provided. It proves source provenance, reviewed aggregate changes, network denial and both independent positive controls, clock determinism, mutation-canary coverage, success- and failure-path output equivalence, boundary behavior, default-adapter lookup outcomes, strict address-table equality and real-path rows, production calling conventions, compatibility behavior, DNS in-flight deduplication, findings inventory, compatibility exports, and ambient-I/O purity.
+The test command freshly fetches the pinned corpus, verifies that its exact revision satisfies the declared-version manifest, and fetches the immutable extraction baseline when a local copy is not provided. It proves the skills-pin gate through five mutation canaries, along with source provenance, reviewed aggregate changes, network denial and both independent positive controls, clock determinism, mutation-canary coverage, success- and failure-path output equivalence, boundary behavior, default-adapter lookup outcomes, strict address-table equality and real-path rows, production calling conventions, compatibility behavior, DNS in-flight deduplication, findings inventory, compatibility exports, and ambient-I/O purity.
 
 ## Consumer and service boundary
 

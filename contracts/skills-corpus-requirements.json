@@ -1,0 +1,10 @@
+{
+  "$schema": "hireamino.skills-corpus-requirements/v1",
+  "contracts": {
+    "1.5.0": [
+      "inconclusive-apex-txt-notimp",
+      "inconclusive-dmarc-txt-formerr",
+      "inconclusive-apex-mx-notimp"
+    ]
+  }
+}

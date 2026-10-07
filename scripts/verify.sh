@@ -8,12 +8,13 @@ ENGINE="$ROOT/src/engine.mjs"
 BASELINE_ENGINE="${BASELINE_ENGINE:-$BASELINE_DIR/src/engine.mjs}"
 PUBLIC_LICENSE="${PUBLIC_LICENSE:-$BASELINE_DIR/LICENSE}"
 
-if [ ! -f "$SKILLS_DIR/conformance/run.mjs" ]; then
-  "$ROOT/scripts/fetch-pinned-skills.sh" "$SKILLS_DIR"
-fi
+"$ROOT/scripts/fetch-pinned-skills.sh" "$SKILLS_DIR"
 if [ ! -f "$BASELINE_ENGINE" ]; then
   "$ROOT/scripts/fetch-source-baseline.sh" "$BASELINE_DIR"
 fi
+
+SKILLS_DIR="$SKILLS_DIR" ENGINE="$ENGINE" node "$ROOT/scripts/verify-skills-pin-contract.mjs"
+SKILLS_DIR="$SKILLS_DIR" ENGINE="$ENGINE" node "$ROOT/test/skills-pin-contract-canary.mjs"
 
 BASELINE_ENGINE="$BASELINE_ENGINE" ENGINE="$ENGINE" PUBLIC_LICENSE="$PUBLIC_LICENSE" \
   node "$ROOT/test/provenance.mjs"
