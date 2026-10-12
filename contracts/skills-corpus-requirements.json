@@ -5,6 +5,19 @@
       "inconclusive-apex-txt-notimp",
       "inconclusive-dmarc-txt-formerr",
       "inconclusive-apex-mx-notimp"
+    ],
+    "1.6.0": [
+      "inconclusive-apex-txt-notimp",
+      "inconclusive-dmarc-txt-formerr",
+      "inconclusive-apex-mx-notimp",
+      "registrable-root-nhs-uk",
+      "registrable-root-sch-uk-wildcard",
+      "registrable-root-police-uk",
+      "registrable-root-gov-uk",
+      "registrable-root-com-es",
+      "registrable-root-ac-in",
+      "registrable-root-k12-us",
+      "registrable-root-alabel"
     ]
   }
 }

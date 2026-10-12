@@ -15,6 +15,12 @@ fi
 
 SKILLS_DIR="$SKILLS_DIR" ENGINE="$ENGINE" node "$ROOT/scripts/verify-skills-pin-contract.mjs"
 SKILLS_DIR="$SKILLS_DIR" ENGINE="$ENGINE" node "$ROOT/test/skills-pin-contract-canary.mjs"
+SKILLS_DIR="$SKILLS_DIR" ENGINE="$ENGINE" node "$ROOT/test/public-suffix.mjs"
+python3 "$SKILLS_DIR/public-suffix/run_vectors.py" --name javascript-engine -- \
+  node "$SKILLS_DIR/public-suffix/adapters/engine.mjs" "$ENGINE"
+SKILLS_DIR="$SKILLS_DIR" ENGINE="$ENGINE" node "$ROOT/test/public-suffix-canary.mjs"
+python3 "$SKILLS_DIR/public-suffix/differential.py" --engine "$ENGINE"
+SKILLS_DIR="$SKILLS_DIR" ENGINE="$ENGINE" node "$ROOT/test/public-suffix-differential-canary.mjs"
 
 BASELINE_ENGINE="$BASELINE_ENGINE" ENGINE="$ENGINE" PUBLIC_LICENSE="$PUBLIC_LICENSE" \
   node "$ROOT/test/provenance.mjs"
@@ -56,4 +62,4 @@ SKILLS_DIR="$SKILLS_DIR" BASELINE_ENGINE="$BASELINE_ENGINE" ENGINE="$ENGINE" \
 node "$ROOT/test/ssrf.mjs"
 ENGINE="$ENGINE" node "$ROOT/test/purity.mjs"
 
-echo "ALL CONTRACT 1.5 GATES PASS"
+echo "ALL CONTRACT 1.6 GATES PASS"

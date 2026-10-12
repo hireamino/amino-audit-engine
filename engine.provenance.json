@@ -1,5 +1,5 @@
 {
-  "contractVersion": "1.5.0",
+  "contractVersion": "1.6.0",
   "source": {
     "repository": "hireamino/amino-audit-action",
     "commit": "ae04a363f76da800ac6d98a3647cf5bf5ab7e44a",
@@ -11,7 +11,14 @@
   },
   "artifact": {
     "path": "src/engine.mjs",
-    "sha256": "237f2b5e8312f9a8991592e448713c8ccf7af57985de8e76e35619ae69f8ccbb"
+    "sha256": "4b3191331745bfe14700b56fc0486ec0e22b89cd003f66f7c2361affda952de5"
+  },
+  "publicSuffixArtifact": {
+    "repository": "hireamino/amino-skills",
+    "commit": "8dc7be0846863263016729f0794f25567e2d3212",
+    "path": "public-suffix/public_suffix_rules.tsv",
+    "bytes": 216020,
+    "sha256": "c16d8b621302b8b5c04ad7c6378494e5aec55e8017f87c4e9fc82efe61e1c7cf"
   },
   "allowedTransformations": [
     "remove unused route-only validation, escaping, and rate-limit constants from the extracted segment",
@@ -27,6 +34,7 @@
     "move DNSSEC, Reputation, and CAA findings to the closed domain_posture lane without changing scored-bucket lanes",
     "report authoritative website no-address evidence as not_applicable while preserving lookup failure, address refusal, and fetch failure as unavailable through the single address guard",
     "accept only the normalized {status, data} or null RDAP port shape and never infer registration data from a bare object",
-    "reuse the shared DNS metadata failure classifier for critical TXT and MX lookups and select the inconclusive reason by RCODE"
+    "reuse the shared DNS metadata failure classifier for critical TXT and MX lookups and select the inconclusive reason by RCODE",
+    "embed the exact pinned public-suffix artifact and replace the hand-written registrable-domain table with the complete PSL algorithm"
   ]
 }
