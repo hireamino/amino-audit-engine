@@ -52,6 +52,16 @@ jobs:
         run: node scripts/verify-skills-pin-contract.mjs
       - name: WHI-221 canaries — prove the skills pin gate fails closed
         run: node test/skills-pin-contract-canary.mjs
+      - name: WHI-215 — prove the embedded public-suffix artifact
+        run: node test/public-suffix.mjs
+      - name: WHI-215 — run official public-suffix vectors against the engine
+        run: python3 "$SKILLS_DIR/public-suffix/run_vectors.py" --name javascript-engine -- node "$SKILLS_DIR/public-suffix/adapters/engine.mjs" "$ENGINE"
+      - name: WHI-215 canary — reject the former two-label fallback
+        run: node test/public-suffix-canary.mjs
+      - name: WHI-215 — prove Python and JavaScript registrable-root parity
+        run: python3 "$SKILLS_DIR/public-suffix/differential.py" --engine "$ENGINE"
+      - name: WHI-215 canary — reject a registrable-root differential
+        run: node test/public-suffix-differential-canary.mjs
       - name: Fetch immutable extraction baseline
         run: scripts/fetch-source-baseline.sh "$BASELINE_DIR"
       - name: G1 — prove source and artifact provenance

@@ -20,6 +20,14 @@ const requiredRows = [
   "inconclusive-apex-txt-notimp",
   "inconclusive-dmarc-txt-formerr",
   "inconclusive-apex-mx-notimp",
+  "registrable-root-nhs-uk",
+  "registrable-root-sch-uk-wildcard",
+  "registrable-root-police-uk",
+  "registrable-root-gov-uk",
+  "registrable-root-com-es",
+  "registrable-root-ac-in",
+  "registrable-root-k12-us",
+  "registrable-root-alabel",
 ];
 const dir = mkdtempSync(join(tmpdir(), "amino-skills-pin-contract-canary-"));
 
@@ -80,7 +88,7 @@ function requireNamedRed(result, diagnostic, label) {
 try {
   requireGreen(
     runVerifier(),
-    "WHI-221 skills pin contract PASS: 1.5.0 requires 3 rows; all present",
+    "WHI-221 skills pin contract PASS: 1.6.0 requires 11 rows; all present",
   );
   requireGreen(
     runWiring(resolve("scripts/verify.sh")),
@@ -101,7 +109,7 @@ try {
   }
   requireNamedRed(
     runVerifier({ SKILLS_DIR: oldSkills, PIN_FILE: oldPinFile }),
-    `FAIL WHI-221 skills pin contract: contract 1.5.0 missing required corpus rows: ${requiredRows.join(", ")}`,
+    `FAIL WHI-221 skills pin contract: contract 1.6.0 missing required corpus rows: ${requiredRows.join(", ")}`,
     "WHI-221 original reverted-pin canary",
   );
 
@@ -118,7 +126,7 @@ try {
   writeFileSync(rowRemovedFixtures, `${JSON.stringify(corpus, null, 2)}\n`);
   requireNamedRed(
     runVerifier({ SKILLS_DIR: rowRemovedSkills }),
-    `FAIL WHI-221 skills pin contract: contract 1.5.0 missing required corpus rows: ${removedId}`,
+    `FAIL WHI-221 skills pin contract: contract 1.6.0 missing required corpus rows: ${removedId}`,
     "WHI-221 missing-row canary",
   );
 
@@ -128,7 +136,7 @@ try {
     unknownEngine,
     replaceOnce(
       engineSource,
-      'export const contractVersion = "1.5.0";',
+      'export const contractVersion = "1.6.0";',
       'export const contractVersion = "9.9.9";',
       "unknown-contract",
     ),
@@ -141,14 +149,14 @@ try {
 
   const emptyManifestPath = join(dir, "empty-requirements.json");
   const emptyManifest = JSON.parse(readFileSync(manifestPath, "utf8"));
-  if (!Array.isArray(emptyManifest.contracts?.["1.5.0"])) {
-    throw new Error("empty-requirements setup could not find contract 1.5.0");
+  if (!Array.isArray(emptyManifest.contracts?.["1.6.0"])) {
+    throw new Error("empty-requirements setup could not find contract 1.6.0");
   }
-  emptyManifest.contracts["1.5.0"] = [];
+  emptyManifest.contracts["1.6.0"] = [];
   writeFileSync(emptyManifestPath, `${JSON.stringify(emptyManifest, null, 2)}\n`);
   requireNamedRed(
     runVerifier({ SKILLS_CONTRACT_MANIFEST: emptyManifestPath }),
-    "FAIL WHI-221 skills pin contract: requirements for contract 1.5.0 must not be empty",
+    "FAIL WHI-221 skills pin contract: requirements for contract 1.6.0 must not be empty",
     "WHI-221 empty-requirements canary",
   );
 

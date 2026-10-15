@@ -2,7 +2,7 @@
 
 This repository is the canonical JavaScript implementation of HireAmino's email-posture calculation and findings contract. It is deliberately a portable, single-file ESM domain engine: no HTML, routes, rate limiting, persistence, metrics, GitHub Action commands, tenant state, or Cloudflare bindings live here.
 
-The distributable artifact is [`src/engine.mjs`](src/engine.mjs) itself. There is no build step and no generated header. Consumers copy that file byte-for-byte from an exact commit SHA; [`engine.provenance.json`](engine.provenance.json) records its extraction source, artifact hash, and contract version separately.
+The distributable artifact is [`src/engine.mjs`](src/engine.mjs) itself. There is no consumer build step and no generated header. The embedded public-suffix block is generated deterministically from the exact skills pin by [`scripts/generate-public-suffix-embedding.mjs`](scripts/generate-public-suffix-embedding.mjs), then committed and checked byte-for-byte. Consumers copy the resulting engine file from an exact commit SHA; [`engine.provenance.json`](engine.provenance.json) records its extraction source, artifact hash, and contract version separately.
 
 ## Stable interface
 
@@ -33,7 +33,7 @@ export async function handleAudit(domain) {
 }
 ```
 
-`contractVersion` is a string describing the adapter and exported-result contract. Contract 1.5.0 retains the 1.4 lane, observation, and RDAP rules and makes the critical-lookup result obey the shared DNS-failure rule: only NOERROR (0) and NXDOMAIN (3) are conclusive; FORMERR, SERVFAIL, NOTIMP, REFUSED, other RCODEs, and transport errors make the result inconclusive. Status 2 and 5 retain the `SERVFAIL/REFUSED` reason; every other failure uses `lookup error`.
+`contractVersion` is a string describing the adapter and exported-result contract. Contract 1.6.0 retains the 1.5 lane, observation, RDAP, and DNS-failure rules and replaces the hand-written registrable-domain table with the complete pinned Public Suffix List. The one-file engine embeds the exact reviewed artifact bytes; CI compares that embedding to the immutable amino-skills pin, runs all 78 official vectors, rejects the former last-two-label fallback, and checks Python/JavaScript parity across the corpus and generated boundary cases.
 
 ### Result metadata
 
@@ -138,4 +138,4 @@ For both consumers, verify the committed `vendor/amino-audit-engine/engine.mjs` 
 
 ## License
 
-Apache License 2.0, matching the existing public HireAmino repositories. See [`LICENSE`](LICENSE).
+The engine code is Apache License 2.0, matching the existing public HireAmino repositories. See [`LICENSE`](LICENSE). The embedded [Public Suffix List](https://publicsuffix.org/list/) artifact retains its Mozilla Public License 2.0 notice plus upstream VERSION and COMMIT provenance inside `src/engine.mjs`.
