@@ -2,8 +2,8 @@ import { pathToFileURL } from "node:url";
 
 const enginePath = process.env.ENGINE || "src/engine.mjs";
 const engine = await import(pathToFileURL(enginePath).href);
-if (engine.contractVersion !== "1.6.0") {
-  throw new Error(`C15 expected contractVersion 1.6.0, got ${engine.contractVersion}`);
+if (engine.contractVersion !== "1.7.0") {
+  throw new Error(`C15 expected contractVersion 1.7.0, got ${engine.contractVersion}`);
 }
 
 const domain = "throwing-address-meta.invalid";
