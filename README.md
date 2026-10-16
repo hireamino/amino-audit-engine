@@ -127,14 +127,16 @@ The web audit and GitHub Action will later become thin host adapters around an e
 
 ### Consumer pin-bump runbook
 
-Update the Action and site independently, each in its own PR, and pin the eventual engine **merge commit**, never a PR head or tag. In each consumer, replace the committed engine artifact byte-for-byte and update all of these locations together:
+Update the Action and site independently, each in its own PR, and pin the eventual engine **merge commit**, never a PR head or tag. A consumer bump changes exactly four paths:
 
-| Consumer | Authoritative pin/hash locations | Test mirrors that must agree |
-|---|---|---|
-| `hireamino/amino-audit-action` | `.github/amino-audit-engine.pin`; `vendor/amino-audit-engine/provenance.json`; `scripts/verify-pinned-engine.sh` (`EXPECTED_HASH`); `test/engine-source-contract.mjs` (pin, hash, and contract-version literals) | `scripts/canary-fetch-pinned-engine.sh` healthy-copy hash; contract-version expectations in `test/engine-equivalence.mjs` and `test/production-wiring.mjs` |
-| `hireamino/amino-site` | `.github/amino-audit-engine.pin`; `vendor/amino-audit-engine/provenance.json`; `scripts/verify-pinned-engine.sh` (`EXPECTED_HASH`); `test/engine-source-contract.mjs` (pin, hash, and contract-version literals) | `scripts/canary-fetch-pinned-engine.sh` healthy-copy hash; contract-version expectations in `test/engine-equivalence.mjs` and `test/production-wiring.mjs` |
+1. `.github/amino-audit-engine.pin`;
+2. `.github/amino-skills.pin` when the engine's reviewed contract pin changed;
+3. `vendor/amino-audit-engine/engine.mjs`, copied byte-for-byte from the pinned checkout;
+4. `vendor/amino-audit-engine/provenance.json`, derived from that checkout and copy.
 
-For both consumers, verify the committed `vendor/amino-audit-engine/engine.mjs` is byte-identical to `src/engine.mjs` fetched anonymously at the pin; prove the fetched checkout resolves to the exact pin; run the pinned corpus and all canaries against the shipped copy; and keep `.github/amino-skills.pin` unchanged unless a separately approved scope says otherwise. A consumer pin bump is not complete if any pin, provenance, expected hash, canary mirror, or contract-version assertion still describes the prior engine.
+The pinned checkout carries `scripts/verify-consumer-copy.mjs`. Consumers invoke that one verifier with `CONSUMER_ROOT` set to their checkout after fetching the exact engine pin. It proves fetched HEAD identity, byte equality, provenance revision/hash/bytes/version, the engine/consumer skills-pin pair, and that no current identity was copied into consumer gate code. Consumers must not copy or fork the verifier.
+
+WHI-266 Phase A introduces this shared verifier. The Action and site retain their legacy literal mirrors until their separately reviewed Phase B and C adoption PRs land; do not start a consumer pin bump in that interval. After adoption, no gate file changes during an engine bump. Run the pinned engine's full `scripts/verify.sh` suite plus every consumer-specific host and rendering gate at the exact consumer PR head.
 
 ## License
 

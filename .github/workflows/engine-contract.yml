@@ -52,6 +52,8 @@ jobs:
         run: node scripts/verify-skills-pin-contract.mjs
       - name: WHI-221 canaries — prove the skills pin gate fails closed
         run: node test/skills-pin-contract-canary.mjs
+      - name: WHI-266 — prove the shared consumer identity gate fails closed
+        run: node test/consumer-copy-verifier-canary.mjs
       - name: WHI-215 — prove the embedded public-suffix artifact
         run: node test/public-suffix.mjs
       - name: WHI-215 — run official public-suffix vectors against the engine
