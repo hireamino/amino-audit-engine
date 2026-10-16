@@ -33,7 +33,7 @@ export async function handleAudit(domain) {
 }
 ```
 
-`contractVersion` is a string describing the adapter and exported-result contract. Contract 1.6.0 retains the 1.5 lane, observation, RDAP, and DNS-failure rules and replaces the hand-written registrable-domain table with the complete pinned Public Suffix List. The one-file engine embeds the exact reviewed artifact bytes; CI compares that embedding to the immutable amino-skills pin, runs all 78 official vectors, rejects the former last-two-label fallback, and checks Python/JavaScript parity across the corpus and generated boundary cases.
+`contractVersion` is a string describing the adapter and exported-result contract. Contract 1.7.0 retains the 1.6 lane, observation, RDAP, DNS-failure, and complete pinned Public Suffix List rules, and adds RFC 9989's bounded ancestor walk through the TLD. Records above the registrable root remain observations unless an ancestor explicitly opts in with `psd=y`; that platform policy is credited but remains a non-pass finding because the domain owner does not control it. CI compares the embedded suffix artifact to the immutable amino-skills pin, runs all 78 official vectors, rejects the former last-two-label fallback, and checks Python/JavaScript parity across the corpus and generated boundary cases.
 
 ### Result metadata
 

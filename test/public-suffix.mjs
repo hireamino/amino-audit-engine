@@ -44,9 +44,9 @@ const checks = [
   [embedded.includes(Buffer.from("// COMMIT: 6cd82aff889e3d64e5e03bc5c1f43da1934a960a")), "embedded upstream COMMIT"],
 ];
 const engine = await import(pathToFileURL(enginePath).href);
-checks.push([engine.contractVersion === "1.6.0", `contractVersion ${engine.contractVersion}`]);
+checks.push([engine.contractVersion === "1.7.0", `contractVersion ${engine.contractVersion}`]);
 checks.push([typeof engine.registrableDomain === "function", "registrableDomain export"]);
-checks.push([registrableRootRows.length === 8, `shared assertion ledger registrableRoot ${registrableRootRows.length}`]);
+checks.push([registrableRootRows.length === 16, `shared assertion ledger registrableRoot ${registrableRootRows.length}`]);
 checks.push([
   registrableRootRows.every((fixture) =>
     engine.registrableDomain(fixture.input.domain) === fixture.expect.registrable_root),

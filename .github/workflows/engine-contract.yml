@@ -94,6 +94,10 @@ jobs:
         run: node test/contract-15.mjs
       - name: C15 canary — prove thrown metadata cannot become authoritative absence
         run: node test/contract-15-canary.mjs
+      - name: C17 — prove RFC 9989 ancestor discovery and platform-policy outcomes
+        run: node test/contract-17.mjs
+      - name: C17 canaries — prove each DMARC discovery boundary goes red
+        run: node test/contract-17-canary.mjs
       - name: G4 — prove all mutation canaries for both surfaces
         run: |
           SURFACE=web node "$SKILLS_DIR/conformance/canary.mjs"
