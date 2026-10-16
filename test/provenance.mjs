@@ -21,7 +21,7 @@ const checks = [
   [segment.length === provenance.source.bytes, `source bytes ${segment.length}`],
   [hash(segment) === provenance.source.sha256, `source SHA-256 ${hash(segment)}`],
   [hash(engine) === provenance.artifact.sha256, `artifact SHA-256 ${hash(engine)}`],
-  [provenance.contractVersion === "1.7.0", `contractVersion ${provenance.contractVersion}`],
+  [provenance.contractVersion === "1.8.0", `contractVersion ${provenance.contractVersion}`],
   [provenance.publicSuffixArtifact?.commit === "8dc7be0846863263016729f0794f25567e2d3212", `public-suffix source commit ${provenance.publicSuffixArtifact?.commit}`],
   [provenance.publicSuffixArtifact?.bytes === 216020, `public-suffix source bytes ${provenance.publicSuffixArtifact?.bytes}`],
   [provenance.publicSuffixArtifact?.sha256 === "c16d8b621302b8b5c04ad7c6378494e5aec55e8017f87c4e9fc82efe61e1c7cf", `public-suffix source SHA-256 ${provenance.publicSuffixArtifact?.sha256}`],

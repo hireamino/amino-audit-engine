@@ -8,8 +8,8 @@ const skillsDir = resolve(process.env.SKILLS_DIR || ".cache/amino-skills");
 const enginePath = resolve(process.env.ENGINE || "src/engine.mjs");
 const differential = join(skillsDir, "public-suffix/differential.py");
 const anchor = "export function registrableDomain(host) {\n";
-const replacement = `${anchor}  if (host === "WwW.Example.COM") return "wrong.invalid"; // WHI-215 differential canary\n`;
-const diagnostic = "PSL DIFFERENTIAL FAIL: input='WwW.Example.COM' python='example.com' engine='wrong.invalid'";
+const replacement = `${anchor}  if (host === "0x7f.1") return "wrong.invalid"; // WHI-254 differential canary\n`;
+const diagnostic = "PSL DIFFERENTIAL FAIL: input='0x7f.1' python='0x7f.1' engine='wrong.invalid'";
 const temporary = mkdtempSync(join(tmpdir(), "amino-psl-differential-canary-"));
 
 function run(engine) {
