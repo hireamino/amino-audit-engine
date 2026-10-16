@@ -39,6 +39,30 @@
       "dmarc-parent-psd-y-existence-failure",
       "dmarc-parent-tld-psd-y-sp-none",
       "dmarc-parent-tld-psd-y-np-reject"
+    ],
+    "1.8.0": [
+      "inconclusive-apex-txt-notimp",
+      "inconclusive-dmarc-txt-formerr",
+      "inconclusive-apex-mx-notimp",
+      "registrable-root-nhs-uk",
+      "registrable-root-sch-uk-wildcard",
+      "registrable-root-police-uk",
+      "registrable-root-gov-uk",
+      "registrable-root-com-es",
+      "registrable-root-ac-in",
+      "registrable-root-k12-us",
+      "registrable-root-alabel",
+      "dmarc-parent-psd-y-sp-reject",
+      "dmarc-parent-psd-y-sp-none",
+      "dmarc-parent-psd-y-np-reject",
+      "dmarc-parent-none-above-root",
+      "dmarc-parent-psd-u-before-psd-y",
+      "dmarc-parent-psd-y-existence-failure",
+      "dmarc-parent-tld-psd-y-sp-none",
+      "dmarc-parent-tld-psd-y-np-reject",
+      "mx-provider-psl-distinct",
+      "mx-provider-psl-same",
+      "dmarc-external-null-organizations"
     ]
   }
 }
