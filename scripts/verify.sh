@@ -15,6 +15,7 @@ fi
 
 SKILLS_DIR="$SKILLS_DIR" ENGINE="$ENGINE" node "$ROOT/scripts/verify-skills-pin-contract.mjs"
 SKILLS_DIR="$SKILLS_DIR" ENGINE="$ENGINE" node "$ROOT/test/skills-pin-contract-canary.mjs"
+node "$ROOT/test/consumer-copy-verifier-canary.mjs"
 SKILLS_DIR="$SKILLS_DIR" ENGINE="$ENGINE" node "$ROOT/test/public-suffix.mjs"
 python3 "$SKILLS_DIR/public-suffix/run_vectors.py" --name javascript-engine -- \
   node "$SKILLS_DIR/public-suffix/adapters/engine.mjs" "$ENGINE"
