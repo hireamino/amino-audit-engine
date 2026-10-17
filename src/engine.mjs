@@ -60,7 +60,7 @@ async function mapPool(items, limit, fn) {
 // Per-request cache (stores in-flight promises so concurrent checks dedupe).
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const contractVersion = "1.8.0";
+export const contractVersion = "1.9.0";
 
 // Frozen mirror of amino-skills/conformance/address-contract.json. CI proves
 // these four lists are deeply equal to the exact reviewed skills pin, keeping
@@ -11756,14 +11756,33 @@ async function auditDomainWithPorts(domain, q, http, clock, dns) {
   // verdicts can't be trusted as "absent". Only NOERROR(0) and NXDOMAIN(3) are conclusive.
   // The Action folds this into audit-complete; other surfaces expose it downstream.
   let inconclusive = false, inconclusiveReason = null;
+  const criticalLookupFailures = [];
   if (typeof q === "function" && q.meta) {
     for (const [n, t] of [[domain, "TXT"], ["_dmarc." + domain, "TXT"], [domain, "MX"]]) {
       const m = await q.meta(n, t);
       if (dnsMetaFailed(m)) {
-        inconclusive = true;
-        inconclusiveReason = t + " " + n + ": " + ((m.status === 2 || m.status === 5) ? "SERVFAIL/REFUSED" : "lookup error");
-        break;
+        const reason = t + " " + n + ": " + ((m.status === 2 || m.status === 5) ? "SERVFAIL/REFUSED" : "lookup error");
+        criticalLookupFailures.push([n, t, reason]);
+        if (!inconclusive) {
+          inconclusive = true;
+          inconclusiveReason = reason;
+        }
       }
+    }
+  }
+  const unconfirmedDependencies = new Map([
+    [[domain, "TXT"].join("\0"), new Set(["SPF\0No SPF record"])],
+    [["_dmarc." + domain, "TXT"].join("\0"), new Set(["DMARC\0No DMARC record"])],
+    [[domain, "MX"].join("\0"), new Set([
+      "Transport\0No MX records",
+      "MTA-STS\0No MTA-STS policy",
+      "TLS-RPT\0No TLS-RPT",
+    ])],
+  ]);
+  for (const [name, rrtype, reason] of criticalLookupFailures) {
+    const affected = unconfirmedDependencies.get([name, rrtype].join("\0")) || new Set();
+    for (const finding of F) {
+      if (affected.has([finding.area, finding.title].join("\0"))) finding.unconfirmed = reason;
     }
   }
   return { domain, primary_mx: mxHost, summary, findings: F, observations, inconclusive, inconclusive_reason: inconclusiveReason };

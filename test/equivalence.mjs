@@ -12,10 +12,10 @@ if (!skillsDir || !baselinePath) {
 
 const baseline = await import(pathToFileURL(baselinePath).href);
 const canonical = await import(pathToFileURL(canonicalPath).href);
-if (canonical.contractVersion !== "1.8.0"
+if (canonical.contractVersion !== "1.9.0"
   || typeof canonical.createAuditEngine !== "function"
   || typeof canonical.createDefaultAdapters !== "function") {
-  throw new Error("canonical engine must export contractVersion=1.8.0, createAuditEngine(), and createDefaultAdapters()");
+  throw new Error("canonical engine must export contractVersion=1.9.0, createAuditEngine(), and createDefaultAdapters()");
 }
 
 const corpus = JSON.parse(readFileSync(`${skillsDir}/conformance/fixtures.json`, "utf8"));

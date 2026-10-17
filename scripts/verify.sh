@@ -24,6 +24,8 @@ python3 "$SKILLS_DIR/public-suffix/differential.py" --engine "$ENGINE"
 SKILLS_DIR="$SKILLS_DIR" ENGINE="$ENGINE" node "$ROOT/test/public-suffix-differential-canary.mjs"
 ENGINE="$ENGINE" node "$ROOT/test/contract-18.mjs"
 SKILLS_DIR="$SKILLS_DIR" ENGINE="$ENGINE" node "$ROOT/test/contract-18-canary.mjs"
+SKILLS_DIR="$SKILLS_DIR" ENGINE="$ENGINE" node "$ROOT/test/contract-19.mjs"
+SKILLS_DIR="$SKILLS_DIR" ENGINE="$ENGINE" node "$ROOT/test/contract-19-canary.mjs"
 
 BASELINE_ENGINE="$BASELINE_ENGINE" ENGINE="$ENGINE" PUBLIC_LICENSE="$PUBLIC_LICENSE" \
   node "$ROOT/test/provenance.mjs"
@@ -67,4 +69,4 @@ SKILLS_DIR="$SKILLS_DIR" BASELINE_ENGINE="$BASELINE_ENGINE" ENGINE="$ENGINE" \
 node "$ROOT/test/ssrf.mjs"
 ENGINE="$ENGINE" node "$ROOT/test/purity.mjs"
 
-echo "ALL CONTRACT 1.8 GATES PASS"
+echo "ALL CONTRACT 1.9 GATES PASS"
