@@ -33,7 +33,7 @@ export async function handleAudit(domain) {
 }
 ```
 
-`contractVersion` is a string describing the adapter and exported-result contract. Contract 1.8.0 retains the 1.7 lane, observation, RDAP, DNS-failure, complete pinned Public Suffix List, and RFC 9989 ancestor-walk rules. It also uses the pinned list for MX-provider identity, treats report destinations as same-organization only when both registrable domains are non-null and equal, and applies the shared DNS-name normalization contract without URL-style IPv4 shortcuts. CI compares the embedded suffix artifact to the immutable amino-skills pin, runs all 78 official vectors, and release-blocks on zero Python/JavaScript disagreements across every artifact-derived case and the reviewed boundary probes.
+`contractVersion` is a string describing the adapter and exported-result contract. Contract 1.9.0 retains the 1.8 lane, observation, RDAP, DNS-failure, Public Suffix List, RFC 9989 ancestor-walk, provider-identity, organization-comparison, and DNS-name normalization rules. It adds the optional per-finding `unconfirmed` lookup-reason marker: every failed critical lookup marks only the findings whose verdict depends on that lookup, while the result-level reason remains the first failure. CI compares the embedded suffix artifact to the immutable amino-skills pin, runs all 78 official vectors, and release-blocks on zero Python/JavaScript disagreements across every artifact-derived case and the reviewed boundary probes.
 
 ### Result metadata
 

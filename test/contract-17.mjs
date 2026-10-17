@@ -2,8 +2,8 @@ import { pathToFileURL } from "node:url";
 
 const enginePath = process.env.ENGINE || "src/engine.mjs";
 const engine = await import(`${pathToFileURL(enginePath).href}?contract17=${Date.now()}`);
-if (engine.contractVersion !== "1.8.0") {
-  throw new Error(`C17 expected contractVersion 1.8.0, got ${engine.contractVersion}`);
+if (engine.contractVersion !== "1.9.0") {
+  throw new Error(`C17 expected contractVersion 1.9.0, got ${engine.contractVersion}`);
 }
 
 const now = Date.parse("2026-10-16T00:00:00Z");

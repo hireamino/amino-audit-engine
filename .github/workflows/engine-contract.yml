@@ -68,6 +68,10 @@ jobs:
         run: node test/contract-18.mjs
       - name: C18 canaries — prove each WHI-254 engine correction goes red
         run: node test/contract-18-canary.mjs
+      - name: C19 — prove per-finding inconclusive precision on both surfaces
+        run: node test/contract-19.mjs
+      - name: C19 canaries — prove lookup-specific markers fail closed
+        run: node test/contract-19-canary.mjs
       - name: Fetch immutable extraction baseline
         run: scripts/fetch-source-baseline.sh "$BASELINE_DIR"
       - name: G1 — prove source and artifact provenance
