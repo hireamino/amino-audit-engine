@@ -165,9 +165,13 @@ async function withAmbientFixture(testCase, run) {
   }
 }
 
-function stripContract12(audit) {
+function stripAdditiveContractFields(audit) {
   const copy = structuredClone(audit);
-  for (const finding of copy.findings) delete finding.lane;
+  for (const finding of copy.findings) {
+    delete finding.lane;
+    delete finding.rule_id;
+    delete finding.discriminator;
+  }
   delete copy.observations;
   return copy;
 }
@@ -233,25 +237,25 @@ for (const testCase of cases) {
   const compatibility = await withAmbientFixture(testCase, () => canonical.auditDomain(testCase.domain));
   const beforeBytes = Buffer.from(JSON.stringify(before.output));
   const afterBytes = Buffer.from(JSON.stringify(after.output));
-  const strippedBytes = Buffer.from(JSON.stringify(stripContract12(after.output)));
+  const strippedBytes = Buffer.from(JSON.stringify(stripAdditiveContractFields(after.output)));
   const compatibilityBytes = Buffer.from(JSON.stringify(compatibility.output));
-  if (!beforeBytes.equals(strippedBytes)) throw new Error(`G9 ${testCase.id}: baseline and createDefaultAdapters outputs differ after stripping 1.2 fields`);
+  if (!beforeBytes.equals(strippedBytes)) throw new Error(`G9 ${testCase.id}: baseline and createDefaultAdapters outputs differ after stripping additive contract fields`);
   if (!afterBytes.equals(compatibilityBytes)) throw new Error(`G9 ${testCase.id}: canonical no-q compatibility and createDefaultAdapters outputs differ`);
   productionOutputs.set(testCase.id, after.output);
   console.log(`G9 PASS ${testCase.id}: ${afterBytes.length} bytes, baseline fetches=${before.calls.length}, canonical fetches=${after.calls.length}`);
 }
 const productionFull = aggregate([...productionOutputs.values()]);
-const productionStripped = aggregate([...productionOutputs.values()].map(stripContract12));
-if (productionFull.bytes !== 36262 || productionFull.hash !== "2d35ba2e612eb340d8414a10f7f73fab13e017790b338f75c9fff5c220a49f20") {
-  throw new Error(`G9 contract 1.5 production aggregate changed: ${productionFull.bytes} bytes ${productionFull.hash}`);
+const productionStripped = aggregate([...productionOutputs.values()].map(stripAdditiveContractFields));
+if (productionFull.bytes !== 39126 || productionFull.hash !== "1164033ef1ccc09f094192ec8171d1e36917ac368546575ca1a273e826e0d482") {
+  throw new Error(`G9 contract 1.10 production aggregate changed: ${productionFull.bytes} bytes ${productionFull.hash}`);
 }
 if (productionStripped.bytes !== 34190 || productionStripped.hash !== "cb58e9673671df513181db3fea6595e11d892498bf183a383f6ea1eba1a49d7e") {
   throw new Error(`G9 stripped production aggregate changed: ${productionStripped.bytes} bytes ${productionStripped.hash}`);
 }
 console.log(`G9 production aggregate: ${productionFull.bytes} bytes, SHA-256 ${productionFull.hash}`);
 console.log(`G9 stripped production aggregate: ${productionStripped.bytes} bytes, SHA-256 ${productionStripped.hash}`);
-console.log(`G9 production calling convention PASS: ${cases.length}/6 exact after stripping only 1.2 fields.`);
-console.log(`G9 no-q compatibility path PASS: ${cases.length}/6 byte-identical to the injected 1.2 interface.`);
+console.log(`G9 production calling convention PASS: ${cases.length}/6 exact after stripping additive contract fields.`);
+console.log(`G9 no-q compatibility path PASS: ${cases.length}/6 byte-identical to the injected 1.10 interface.`);
 
 const observationCases = [
   {
@@ -373,8 +377,8 @@ for (const spec of observationCases) {
   const before = await withAmbientFixture(testCase, () => baseline.auditDomain(domain));
   const after = await withAmbientFixture(testCase, () =>
     canonical.createAuditEngine(canonical.createDefaultAdapters()).auditDomain(domain));
-  if (JSON.stringify(before.output) !== JSON.stringify(stripContract12(after.output))) {
-    throw new Error(`B3 ${spec.id}: findings changed after stripping 1.2 fields`);
+  if (JSON.stringify(before.output) !== JSON.stringify(stripAdditiveContractFields(after.output))) {
+    throw new Error(`B3 ${spec.id}: findings changed after stripping additive contract fields`);
   }
   if (JSON.stringify(after.output.observations) !== JSON.stringify(spec.expected)) {
     throw new Error(`B3 ${spec.id}: observations ${JSON.stringify(after.output.observations)} (exp ${JSON.stringify(spec.expected)})`);
