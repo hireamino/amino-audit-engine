@@ -11,7 +11,7 @@
   },
   "artifact": {
     "path": "src/engine.mjs",
-    "sha256": "93b8f0f4273709714b2c1684fd78da846ee033df0ed0f4be4368dc8a4456babe"
+    "sha256": "71b90919ba99763defc361d909c0f3671fd02f33fde30d756be12fed0d3463bb"
   },
   "publicSuffixArtifact": {
     "repository": "hireamino/amino-skills",

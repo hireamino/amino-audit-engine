@@ -88,10 +88,13 @@ transport.ptr_missing
 transport.ptr_not_fcrdns
 `.trim().split("\n"));
 
-assert.equal((source.match(/F\.push\(\{/g) || []).length, 0,
-  "C110 finding identity source gate: raw F.push object emit remains");
-assert.equal((source.match(/F\.push\(finding\(/g) || []).length, 56,
-  "C110 finding identity source gate: expected 56 direct finding emits");
+assert.equal((source.match(/F\.push\(\{/g) || []).length, 1,
+  "C110 finding identity source gate: expected one compatibility-shaped direct emit");
+assert(source.includes('F.push({ area: "SPF", severity: "high", title: "No SPF record",')
+  && source.includes('rule_id: "spf.missing", discriminator: "" });'),
+"C110 finding identity source gate: compatibility-shaped SPF emit must declare identity");
+assert.equal((source.match(/F\.push\(finding\(/g) || []).length, 55,
+  "C110 finding identity source gate: expected 55 helper finding emits");
 assert.equal((source.match(/\? \[finding\("mta_sts\.not_applicable"/g) || []).length, 1,
   "C110 finding identity source gate: null-MX finding emit missing");
 

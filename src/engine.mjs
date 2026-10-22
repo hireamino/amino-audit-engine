@@ -10960,9 +10960,10 @@ async function checkSpf(domain, F, q) {
   }
   const spf = await firstTxt(domain, "v=spf1", q);
   if (!spf) {
-    F.push(finding("spf.missing", { area: "SPF", severity: "high", title: "No SPF record",
+    F.push({ area: "SPF", severity: "high", title: "No SPF record",
       detail: "No v=spf1 TXT record at the apex. Receivers can't verify which hosts may send for this domain; alignment-based DMARC pass via SPF is impossible.",
-      fix: 'Add a TXT record at the apex: "v=spf1 include:<your-ESP> -all" (replace include with your sending providers; end with -all once confident).' }));
+      fix: 'Add a TXT record at the apex: "v=spf1 include:<your-ESP> -all" (replace include with your sending providers; end with -all once confident).',
+      rule_id: "spf.missing", discriminator: "" });
     return;
   }
   const qual = await effectiveTerminator(domain, q);

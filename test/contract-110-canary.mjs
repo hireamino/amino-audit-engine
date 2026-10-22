@@ -144,7 +144,7 @@ try {
       "drop rule-id helper from one emit",
     ),
     (engine) => runContract(engine),
-    "C110 finding identity source gate: expected 56 direct finding emits",
+    "C110 finding identity source gate: expected 55 helper finding emits",
   );
 
   requireRed(
