@@ -4,7 +4,7 @@ const enginePath = process.env.ENGINE || "src/engine.mjs";
 const engine = await import(`${pathToFileURL(enginePath).href}?contract18=${Date.now()}`);
 
 const checks = [
-  [engine.contractVersion === "1.9.0", `contractVersion ${engine.contractVersion}`],
+  [engine.contractVersion === "1.10.0", `contractVersion ${engine.contractVersion}`],
   [engine.registrableDomain(`${"a".repeat(64)}.com`) === null, "64-octet label is rejected"],
   [engine.registrableDomain("0x7f.1") === "0x7f.1", "IPv4 numeric shortcut is preserved as DNS labels"],
   [engine.registrableDomain("ex ample.com") === null, "whitespace is rejected"],

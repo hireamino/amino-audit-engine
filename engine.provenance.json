@@ -1,5 +1,5 @@
 {
-  "contractVersion": "1.9.0",
+  "contractVersion": "1.10.0",
   "source": {
     "repository": "hireamino/amino-audit-action",
     "commit": "ae04a363f76da800ac6d98a3647cf5bf5ab7e44a",
@@ -11,7 +11,7 @@
   },
   "artifact": {
     "path": "src/engine.mjs",
-    "sha256": "c82b5750b4713ee83be9e5e2d2fac08322cd84d024cbae686a1e8fbf427190fb"
+    "sha256": "71b90919ba99763defc361d909c0f3671fd02f33fde30d756be12fed0d3463bb"
   },
   "publicSuffixArtifact": {
     "repository": "hireamino/amino-skills",
@@ -39,6 +39,8 @@
     "apply RFC 9989's eight-query ancestor walk through the TLD, surface unqualified parent records, and credit psd=y platform policy as a distinct non-pass state",
     "use the pinned registrable-domain function for MX-provider identity and require two non-null equal registrable domains before treating a DMARC report destination as same-organization",
     "normalize registrable-domain inputs one DNS label at a time, rejecting invalid DNS-name forms without applying URL-style IPv4 numeric shortcuts",
-    "mark each finding whose verdict depends on a failed critical DNS lookup with that lookup's exact reason"
+    "mark each finding whose verdict depends on a failed reviewed DNS lookup with that lookup's exact reason while preserving critical-only result-level inconclusive state",
+    "diagnose broken DNSSEC only from corroborated checking-enabled SERVFAIL and checking-disabled DNSKEY evidence from both default-adapter providers",
+    "attach stable namespaced rule_id and discriminator identity fields at every finding emit site without deriving identity from display copy or live values"
   ]
 }

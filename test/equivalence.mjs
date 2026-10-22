@@ -12,10 +12,10 @@ if (!skillsDir || !baselinePath) {
 
 const baseline = await import(pathToFileURL(baselinePath).href);
 const canonical = await import(pathToFileURL(canonicalPath).href);
-if (canonical.contractVersion !== "1.9.0"
+if (canonical.contractVersion !== "1.10.0"
   || typeof canonical.createAuditEngine !== "function"
   || typeof canonical.createDefaultAdapters !== "function") {
-  throw new Error("canonical engine must export contractVersion=1.9.0, createAuditEngine(), and createDefaultAdapters()");
+  throw new Error("canonical engine must export contractVersion=1.10.0, createAuditEngine(), and createDefaultAdapters()");
 }
 
 const corpus = JSON.parse(readFileSync(`${skillsDir}/conformance/fixtures.json`, "utf8"));
@@ -314,9 +314,13 @@ async function runCompatibility(testCase) {
   };
 }
 
-function stripContract12(result) {
+function stripAdditiveContractFields(result) {
   const copy = structuredClone(result);
-  for (const finding of copy.audit.findings) delete finding.lane;
+  for (const finding of copy.audit.findings) {
+    delete finding.lane;
+    delete finding.rule_id;
+    delete finding.discriminator;
+  }
   delete copy.audit.observations;
   delete copy.score.lanes;
   return copy;
@@ -328,9 +332,9 @@ async function compareCase(testCase) {
   const compatibility = await runCompatibility(testCase);
   const beforeBytes = Buffer.from(JSON.stringify({ audit: before.audit, score: before.score }));
   const afterBytes = Buffer.from(JSON.stringify({ audit: after.audit, score: after.score }));
-  const strippedBytes = Buffer.from(JSON.stringify(stripContract12({ audit: after.audit, score: after.score })));
+  const strippedBytes = Buffer.from(JSON.stringify(stripAdditiveContractFields({ audit: after.audit, score: after.score })));
   const compatibilityBytes = Buffer.from(JSON.stringify(compatibility));
-  if (!beforeBytes.equals(strippedBytes)) throw new Error(`${testCase.id}: baseline and injected outputs differ after stripping 1.2 fields`);
+  if (!beforeBytes.equals(strippedBytes)) throw new Error(`${testCase.id}: baseline and injected outputs differ after stripping additive contract fields`);
   if (!afterBytes.equals(compatibilityBytes)) throw new Error(`${testCase.id}: compatibility and injected outputs differ`);
   const hash = createHash("sha256").update(afterBytes).digest("hex");
   console.log(`PASS ${testCase.id}: ${afterBytes.length} bytes ${hash}`);
@@ -354,20 +358,20 @@ async function compareSet(set, label) {
     strippedHash: createHash("sha256").update(strippedAggregate).digest("hex"),
   };
   console.log(`${label}: ${set.length} cases, ${result.bytes} bytes, SHA-256 ${result.hash}`);
-  console.log(`${label} stripped 1.2 fields: ${set.length} cases, ${result.strippedBytes} bytes, SHA-256 ${result.strippedHash}`);
+  console.log(`${label} stripped additive fields: ${set.length} cases, ${result.strippedBytes} bytes, SHA-256 ${result.strippedHash}`);
   return result;
 }
 
 const existing = await compareSet(cases, "Output equivalence PASS");
-if (existing.bytes !== 150387 || existing.hash !== "b73d86ed706b6e3513f32b6a2fee568b79a3ff7c4fc526ba4871288fdde3a254") {
-  throw new Error(`contract 1.5 25-case aggregate changed: ${existing.bytes} bytes ${existing.hash}`);
+if (existing.bytes !== 161389 || existing.hash !== "65386ecaf2938ae3ed740f1b1921b81baa36d483ce049c93364ef1ca18d8a78c") {
+  throw new Error(`contract 1.10 25-case aggregate changed: ${existing.bytes} bytes ${existing.hash}`);
 }
 if (existing.strippedBytes !== 135830 || existing.strippedHash !== "35da36bc088cfbb17da77aebf687dbb40dcfb14b4888357cfed2487bfc2d23a7") {
   throw new Error(`existing stripped 25-case aggregate changed: ${existing.strippedBytes} bytes ${existing.strippedHash}`);
 }
 const boundary = await compareSet(boundaryCases, "Boundary equivalence PASS");
-if (boundary.bytes !== 50753 || boundary.hash !== "635f25517948870870912943605a22db2acc1e6fa17617617cfae15cd801f478") {
-  throw new Error(`contract 1.5 boundary aggregate changed: ${boundary.bytes} bytes ${boundary.hash}`);
+if (boundary.bytes !== 54374 || boundary.hash !== "28681457cdecdf5e0b5973a80df387a4bbe8f57b471dcbdcb15f459a95b2ff15") {
+  throw new Error(`contract 1.10 boundary aggregate changed: ${boundary.bytes} bytes ${boundary.hash}`);
 }
 if (boundary.strippedBytes !== 46086 || boundary.strippedHash !== "56bc7d0b2c0f9f714989769c018d6659bdbda3e83e25fe0dd1053b32397c9107") {
   throw new Error(`existing stripped boundary aggregate changed: ${boundary.strippedBytes} bytes ${boundary.strippedHash}`);

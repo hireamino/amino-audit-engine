@@ -63,8 +63,8 @@ try {
     "over-mark-every-finding",
     replaceOnce(
       source,
-      '    const affected = unconfirmedDependencies.get([name, rrtype].join("\\0")) || new Set();',
-      '    const affected = new Set(F.map((finding) => [finding.area, finding.title].join("\\0")));',
+      '    let affected = unconfirmedDependencies.get([name, rrtype].join("\\0")) || new Set();',
+      '    let affected = new Set(F.map((finding) => [finding.area, finding.title].join("\\0")));',
       "over-mark every finding",
     ),
     "inconclusive-apex-txt-servfail",
@@ -88,8 +88,8 @@ try {
     "first-failure-only",
     replaceOnce(
       source,
-      "  for (const [name, rrtype, reason] of criticalLookupFailures) {",
-      "  for (const [name, rrtype, reason] of criticalLookupFailures.slice(0, 1)) {",
+      "  for (const [name, rrtype, reason] of lookupFailures) {",
+      "  for (const [name, rrtype, reason] of lookupFailures.slice(0, 1)) {",
       "first failure only",
     ),
     "inconclusive-apex-txt-before-mx",
@@ -100,8 +100,8 @@ try {
     "first-reason-for-every-marker",
     replaceOnce(
       source,
-      "      if (affected.has([finding.area, finding.title].join(\"\\0\"))) finding.unconfirmed = reason;",
-      "      if (affected.has([finding.area, finding.title].join(\"\\0\"))) finding.unconfirmed = inconclusiveReason;",
+      "        finding.unconfirmed = reason;",
+      "        finding.unconfirmed = inconclusiveReason;",
       "first reason for every marker",
     ),
     "inconclusive-apex-txt-before-mx",

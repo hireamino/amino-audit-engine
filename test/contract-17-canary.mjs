@@ -90,7 +90,12 @@ try {
   );
   expectRed(
     "strong-platform-policy-passes",
-    replaceOnce(source, 'F.push({ area: "DMARC", severity: strong ? "low" : "high", title,', 'F.push({ area: "DMARC", severity: strong ? "pass" : "high", title,', "non-pass cap"),
+    replaceOnce(
+      source,
+      'F.push(finding(strong ? "dmarc.inherited_enforced" : "dmarc.inherited_not_enforced", { area: "DMARC", severity: strong ? "low" : "high", title,',
+      'F.push(finding(strong ? "dmarc.inherited_enforced" : "dmarc.inherited_not_enforced", { area: "DMARC", severity: strong ? "pass" : "high", title,',
+      "non-pass cap",
+    ),
     runContract,
     ["FAIL C17 E1 psd-y strong sp is capped non-pass"],
   );
