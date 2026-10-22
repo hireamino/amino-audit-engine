@@ -10,10 +10,10 @@ if (!baselinePath) {
 
 const baseline = await import(pathToFileURL(baselinePath).href);
 const canonical = await import(pathToFileURL(canonicalPath).href);
-if (canonical.contractVersion !== "1.9.0"
+if (canonical.contractVersion !== "1.10.0"
   || typeof canonical.createAuditEngine !== "function"
   || typeof canonical.createDefaultAdapters !== "function") {
-  throw new Error("contract 1.9.0 production adapter exports are required");
+  throw new Error("contract 1.10.0 production adapter exports are required");
 }
 
 const frozenNow = Date.parse("2026-09-13T00:00:00Z");
