@@ -118,7 +118,7 @@ Run every contract gate with:
 npm test
 ```
 
-The test command freshly fetches the pinned corpus, verifies that its exact revision satisfies the declared-version manifest, and fetches the immutable extraction baseline when a local copy is not provided. It proves the skills-pin gate through five mutation canaries, along with source provenance, reviewed aggregate changes, network denial and both independent positive controls, clock determinism, mutation-canary coverage, success- and failure-path output equivalence, boundary behavior, default-adapter lookup outcomes, strict address-table equality and real-path rows, production calling conventions, compatibility behavior, DNS in-flight deduplication, findings inventory, compatibility exports, and ambient-I/O purity.
+The test command freshly fetches the pinned corpus, verifies that its exact revision satisfies the declared-version manifest, and fetches the immutable extraction baseline when a local copy is not provided. It proves the skills-pin gate through five mutation canaries, along with source provenance, reviewed aggregate changes, network denial and both independent positive controls, clock determinism, mutation-canary coverage, success- and failure-path output equivalence, boundary behavior, default-adapter lookup outcomes, strict address-table equality and real-path rows, production calling conventions, compatibility behavior, DNS in-flight deduplication, the closed 56-rule evidence ledger and its one-read inputs, findings inventory, compatibility exports, and ambient-I/O purity.
 
 ## Consumer and service boundary
 

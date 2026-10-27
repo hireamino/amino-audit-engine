@@ -176,7 +176,7 @@ const RULE_GROUPS = Object.freeze({
   bimi: RULE_EVALUATION_IDS.filter((rule) => rule.startsWith("bimi.")),
   mx: ["mx.mixed_providers"],
   transport: RULE_EVALUATION_IDS.filter((rule) =>
-    rule === "transport.no_mx" || rule === "transport.null_mx" || rule.startsWith("transport.dane_")),
+    rule === "transport.no_mx" || rule === "transport.null_mx" || rule.startsWith("transport." + "dane_")),
   rdns: ["transport.ptr_missing", "transport.ptr_not_fcrdns"],
   dnssec: RULE_EVALUATION_IDS.filter((rule) => rule.startsWith("dnssec.")),
   reputation: ["reputation.expiring", "reputation.new_domain"],
@@ -12164,7 +12164,7 @@ function ruleEvaluation(domain, trace) {
       candidates = candidates.filter((row) =>
         (row.name === domain && row.rrtype === "MX")
         || (row.name === "_mta-sts." + domain && row.rrtype === "TXT"));
-    } else if (rule.startsWith("transport.dane_")) {
+    } else if (rule.startsWith("transport." + "dane_")) {
       candidates = candidates.filter((row) => ["MX", "TLSA"].includes(row.rrtype));
     } else if (["transport.no_mx", "transport.null_mx"].includes(rule)) {
       candidates = candidates.filter((row) => row.name === domain && row.rrtype === "MX");

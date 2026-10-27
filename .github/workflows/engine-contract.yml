@@ -76,6 +76,10 @@ jobs:
         run: node test/contract-110.mjs
       - name: C110 canaries — prove every 1.10 contract boundary goes red
         run: node test/contract-110-canary.mjs
+      - name: C111 — prove the closed per-rule evidence ledger and one-read contract
+        run: node test/contract-111.mjs
+      - name: C111 canaries — prove every 1.11 evidence boundary goes red
+        run: node test/contract-111-canary.mjs
       - name: Fetch immutable extraction baseline
         run: scripts/fetch-source-baseline.sh "$BASELINE_DIR"
       - name: G1 — prove source and artifact provenance

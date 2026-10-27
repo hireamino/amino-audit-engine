@@ -322,6 +322,7 @@ function stripAdditiveContractFields(result) {
     delete finding.discriminator;
   }
   delete copy.audit.observations;
+  delete copy.audit.rule_evaluation;
   delete copy.score.lanes;
   return copy;
 }
@@ -363,15 +364,15 @@ async function compareSet(set, label) {
 }
 
 const existing = await compareSet(cases, "Output equivalence PASS");
-if (existing.bytes !== 161389 || existing.hash !== "65386ecaf2938ae3ed740f1b1921b81baa36d483ce049c93364ef1ca18d8a78c") {
-  throw new Error(`contract 1.10 25-case aggregate changed: ${existing.bytes} bytes ${existing.hash}`);
+if (existing.bytes !== 213518 || existing.hash !== "af069790896acc3f178f82cb7c9829f9fbf0974b34f315484aeb9721f54e0ace") {
+  throw new Error(`contract 1.11 25-case aggregate changed: ${existing.bytes} bytes ${existing.hash}`);
 }
 if (existing.strippedBytes !== 135830 || existing.strippedHash !== "35da36bc088cfbb17da77aebf687dbb40dcfb14b4888357cfed2487bfc2d23a7") {
   throw new Error(`existing stripped 25-case aggregate changed: ${existing.strippedBytes} bytes ${existing.strippedHash}`);
 }
 const boundary = await compareSet(boundaryCases, "Boundary equivalence PASS");
-if (boundary.bytes !== 54374 || boundary.hash !== "28681457cdecdf5e0b5973a80df387a4bbe8f57b471dcbdcb15f459a95b2ff15") {
-  throw new Error(`contract 1.10 boundary aggregate changed: ${boundary.bytes} bytes ${boundary.hash}`);
+if (boundary.bytes !== 70625 || boundary.hash !== "356325031aab0dbe69dbefb875969c63469a06ff533ae4b3fc278149604b7903") {
+  throw new Error(`contract 1.11 boundary aggregate changed: ${boundary.bytes} bytes ${boundary.hash}`);
 }
 if (boundary.strippedBytes !== 46086 || boundary.strippedHash !== "56bc7d0b2c0f9f714989769c018d6659bdbda3e83e25fe0dd1053b32397c9107") {
   throw new Error(`existing stripped boundary aggregate changed: ${boundary.strippedBytes} bytes ${boundary.strippedHash}`);
