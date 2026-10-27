@@ -108,7 +108,7 @@ assert.deepEqual([...actualRuleIds].sort(), [...expectedRuleIds].sort(),
 console.log("C110 finding identity PASS: 57 emit sites / 56 stable rule IDs.");
 
 const module = await import(pathToFileURL(engine).href + `?contract110=${Date.now()}`);
-assert.equal(module.contractVersion, "1.10.0", "C110 contract version");
+assert.equal(module.contractVersion, "1.11.0", "C110 compatibility contract version");
 
 const originalFetch = globalThis.fetch;
 const calls = [];
@@ -166,4 +166,4 @@ for (const surface of ["web", "action"]) {
 }
 
 assert.equal(passed, 34, "C110 surface-row pass floor");
-console.log("C110 contract 1.10.0 PASS: 34/34 surface rows.");
+console.log("C110 compatibility gates PASS: 34/34 surface rows.");

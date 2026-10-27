@@ -33,7 +33,7 @@ export async function handleAudit(domain) {
 }
 ```
 
-`contractVersion` is a string describing the adapter and exported-result contract. Contract 1.10.0 retains the 1.9 lane, observation, RDAP, DNS-failure, Public Suffix List, RFC 9989 ancestor-walk, provider-identity, organization-comparison, and DNS-name normalization rules. It extends the optional per-finding `unconfirmed` lookup-reason marker to every absence finding backed by the reviewed non-critical DNS lookups, while the result-level reason remains limited to the three critical lookups. A failed DNSKEY lookup triggers an isolated two-provider diagnostic: only corroborated validating SERVFAIL plus checking-disabled DNSKEY records from both Cloudflare and Google emits the critical `DNSSEC validation is failing` finding. Every finding also carries a stable `rule_id` and `discriminator` for lifecycle identity; consumers display these fields and never derive them from copy. CI compares the embedded suffix artifact to the immutable amino-skills pin, runs all 78 official vectors, and release-blocks on zero Python/JavaScript disagreements across every artifact-derived case and the reviewed boundary probes.
+`contractVersion` is a string describing the adapter and exported-result contract. Contract 1.11.0 retains the 1.10 lane, observation, RDAP, DNS-failure, Public Suffix List, RFC 9989 ancestor-walk, provider-identity, organization-comparison, DNS-name normalization, per-finding `unconfirmed`, and stable finding-identity rules. It adds a closed 56-entry `rule_evaluation` ledger to every audit result. Each rule is `conclusive` or names the DNS or HTTP input that failed during that run; missing DNS metadata and missing or throwing DNSSEC probes fail closed. DNS reads are single-flight and cached by normalized name and type for one audit, so each verdict and its evidence state come from the same answer even when the injected adapter does not cache. The critical `DNSSEC validation is failing` row now uses the repair-specific action `Fix DNSSEC signing`; no other display copy changes. CI compares the refreshed embedded suffix artifact to the immutable amino-skills pin, runs all official vectors, and release-blocks on Python/JavaScript disagreements across every artifact-derived case and reviewed boundary probe.
 
 ### Result metadata
 
@@ -49,6 +49,11 @@ observations: {
 }
 ```
 
+It also carries `rule_evaluation`, whose keys are exactly the 56 engine-visible
+`rule_id` values. Values are `conclusive` or a non-empty reason naming the failed
+input. HTTP absence, exceptions, 429, and 5xx are failures; 404, 3xx, non-text
+MTA-STS responses, and public-address guard refusals remain conclusive evidence.
+
 `checked` means the purpose-specific HTTP port returned a response of any status, including 404, malformed content, or a wrong content type. For the website/robots observation, authoritative NOERROR or NXDOMAIN metadata with no A/AAAA answers is `not_applicable`; a failed lookup, a missing `meta` port, a refused address, or a failed fetch is `unavailable`. MTA-STS deliberately keeps its existing rule: an advertised policy whose host has no usable address is `unavailable`, while a true null MX, NXDOMAIN, or NOERROR with no advertised TXT is `not_applicable`. RDAP is `checked` for any non-null wrapper and `unavailable` for `null`. DNS `inconclusive` remains a separate, unchanged result driven only by critical SPF/DMARC/MX lookups.
 
 `buckets()` remains a flat score object and adds a `lanes` map for its nine scored buckets. Its values use the same lane enum.
@@ -57,7 +62,7 @@ observations: {
 
 - `query(name, rrtype) -> Promise<string[]>` returns the normalized record strings used by the existing resolver contract.
 - `meta(name, rrtype) -> Promise<{status, ad, error}>` returns DNS RCODE, authenticated-data state, and transport-error state. It supports the existing inconclusive-audit behavior.
-- The injected DNS adapter owns DNS transport, caching, in-flight request deduplication, timeout, retry, and resolver selection. `createDefaultAdapters()` retains the existing per-instance cache of in-flight DNS promises.
+- The injected DNS adapter owns DNS transport, timeout, retry, and resolver selection. The engine adds a per-audit single-flight cache so every `(name, rrtype)` is read once; `createDefaultAdapters()` also retains its existing per-instance cache of in-flight DNS promises.
 - That cache lasts for the adapter's entire lifetime and has no TTL or eviction. Production consumers must create adapters per audit and must never share a default-adapter engine instance across requests; doing so would serve stale DNS records on later audits.
 
 ### HTTP ports

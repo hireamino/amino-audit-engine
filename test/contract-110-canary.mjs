@@ -196,7 +196,7 @@ try {
   );
 
   if (passed !== 11) throw new Error(`C110 canary pass floor: expected 11, got ${passed}`);
-  console.log("C110 contract 1.10.0 mutation canaries PASS: 11/11 named gates.");
+  console.log("C110 compatibility mutation canaries PASS: 11/11 named gates.");
 } finally {
   rmSync(temporary, { recursive: true, force: true });
 }

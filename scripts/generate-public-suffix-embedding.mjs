@@ -6,8 +6,8 @@ import { resolve } from "node:path";
 const skillsDir = resolve(process.env.SKILLS_DIR || ".cache/amino-skills");
 const enginePath = resolve(process.env.ENGINE || "src/engine.mjs");
 const artifactPath = resolve(skillsDir, "public-suffix/public_suffix_rules.tsv");
-const expectedHash = "c16d8b621302b8b5c04ad7c6378494e5aec55e8017f87c4e9fc82efe61e1c7cf";
-const expectedBytes = 216020;
+const expectedHash = "08baba1b4bec5ae4efafe69ee967fba494838b45361a04a9e46697c0140defdc";
+const expectedBytes = 219788;
 const start = "// BEGIN GENERATED PUBLIC SUFFIX ARTIFACT\n";
 const end = "// END GENERATED PUBLIC SUFFIX ARTIFACT\n";
 const legacyStart = "const PUBLIC_SUFFIX_ARTIFACT = String.raw`";
@@ -29,8 +29,8 @@ const text = artifact.toString("utf8");
 for (const line of [
   "// This Source Code Form is subject to the terms of the Mozilla Public",
   "// License, v. 2.0.",
-  "// VERSION: 2026-10-01_23-02-52_UTC",
-  "// COMMIT: 6cd82aff889e3d64e5e03bc5c1f43da1934a960a",
+  "// VERSION: 2026-10-22_08-36-41_UTC",
+  "// COMMIT: 8437e5262f13305f94087abe699b4fe2be1d1de8",
 ]) {
   if (!text.includes(line)) fail(`artifact is missing provenance line ${JSON.stringify(line)}`);
 }
