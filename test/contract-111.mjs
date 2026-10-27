@@ -118,7 +118,12 @@ const throwingProbe = adapters({
   statuses: { [key("throwing-probe.invalid", "DNSKEY")]: 2 },
   probeThrows: true,
 });
-const throwingResult = await engine.createAuditEngine(throwingProbe.value).auditDomain("throwing-probe.invalid");
+let throwingResult;
+try {
+  throwingResult = await engine.createAuditEngine(throwingProbe.value).auditDomain("throwing-probe.invalid");
+} catch (error) {
+  throw new Error(`C111 throwing DNSSEC probe must not abort the audit: ${error?.message || error}`);
+}
 const throwingRules = Object.entries(throwingResult.rule_evaluation)
   .filter(([, value]) => value !== "conclusive")
   .map(([rule]) => rule)
