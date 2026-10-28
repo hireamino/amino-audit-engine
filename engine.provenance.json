@@ -1,5 +1,5 @@
 {
-  "contractVersion": "1.10.0",
+  "contractVersion": "1.11.0",
   "source": {
     "repository": "hireamino/amino-audit-action",
     "commit": "ae04a363f76da800ac6d98a3647cf5bf5ab7e44a",
@@ -11,14 +11,14 @@
   },
   "artifact": {
     "path": "src/engine.mjs",
-    "sha256": "71b90919ba99763defc361d909c0f3671fd02f33fde30d756be12fed0d3463bb"
+    "sha256": "be936119d14e35f086360658158ac0c5af4aae95f9f1dc73e2e73a2ba5c30e22"
   },
   "publicSuffixArtifact": {
     "repository": "hireamino/amino-skills",
-    "commit": "8dc7be0846863263016729f0794f25567e2d3212",
+    "commit": "8c777970f22eeb0588fdaed5c7154f057a9b3ccf",
     "path": "public-suffix/public_suffix_rules.tsv",
-    "bytes": 216020,
-    "sha256": "c16d8b621302b8b5c04ad7c6378494e5aec55e8017f87c4e9fc82efe61e1c7cf"
+    "bytes": 219788,
+    "sha256": "08baba1b4bec5ae4efafe69ee967fba494838b45361a04a9e46697c0140defdc"
   },
   "allowedTransformations": [
     "remove unused route-only validation, escaping, and rate-limit constants from the extracted segment",
@@ -41,6 +41,9 @@
     "normalize registrable-domain inputs one DNS label at a time, rejecting invalid DNS-name forms without applying URL-style IPv4 numeric shortcuts",
     "mark each finding whose verdict depends on a failed reviewed DNS lookup with that lookup's exact reason while preserving critical-only result-level inconclusive state",
     "diagnose broken DNSSEC only from corroborated checking-enabled SERVFAIL and checking-disabled DNSKEY evidence from both default-adapter providers",
-    "attach stable namespaced rule_id and discriminator identity fields at every finding emit site without deriving identity from display copy or live values"
+    "attach stable namespaced rule_id and discriminator identity fields at every finding emit site without deriving identity from display copy or live values",
+    "add a closed 56-rule evaluation ledger whose conclusive state is derived from the exact DNS and HTTP inputs observed during the audit",
+    "single-flight every normalized DNS name and type for one audit so verdicts and evidence state consume the same answer",
+    "differentiate the broken-DNSSEC repair action from the enable-DNSSEC action without changing any other finding copy"
   ]
 }

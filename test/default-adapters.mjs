@@ -10,10 +10,10 @@ if (!baselinePath) {
 
 const baseline = await import(pathToFileURL(baselinePath).href);
 const canonical = await import(pathToFileURL(canonicalPath).href);
-if (canonical.contractVersion !== "1.10.0"
+if (canonical.contractVersion !== "1.11.0"
   || typeof canonical.createAuditEngine !== "function"
   || typeof canonical.createDefaultAdapters !== "function") {
-  throw new Error("contract 1.10.0 production adapter exports are required");
+  throw new Error("contract 1.11.0 production adapter exports are required");
 }
 
 const frozenNow = Date.parse("2026-09-13T00:00:00Z");
@@ -173,6 +173,7 @@ function stripAdditiveContractFields(audit) {
     delete finding.discriminator;
   }
   delete copy.observations;
+  delete copy.rule_evaluation;
   return copy;
 }
 
@@ -246,8 +247,8 @@ for (const testCase of cases) {
 }
 const productionFull = aggregate([...productionOutputs.values()]);
 const productionStripped = aggregate([...productionOutputs.values()].map(stripAdditiveContractFields));
-if (productionFull.bytes !== 39126 || productionFull.hash !== "1164033ef1ccc09f094192ec8171d1e36917ac368546575ca1a273e826e0d482") {
-  throw new Error(`G9 contract 1.10 production aggregate changed: ${productionFull.bytes} bytes ${productionFull.hash}`);
+if (productionFull.bytes !== 51132 || productionFull.hash !== "1a7e33c3598100f73b5352c6220e5e08b9cc7d50946440c4c4b01148fd179a8a") {
+  throw new Error(`G9 contract 1.11 production aggregate changed: ${productionFull.bytes} bytes ${productionFull.hash}`);
 }
 if (productionStripped.bytes !== 34190 || productionStripped.hash !== "cb58e9673671df513181db3fea6595e11d892498bf183a383f6ea1eba1a49d7e") {
   throw new Error(`G9 stripped production aggregate changed: ${productionStripped.bytes} bytes ${productionStripped.hash}`);
@@ -255,7 +256,7 @@ if (productionStripped.bytes !== 34190 || productionStripped.hash !== "cb58e9673
 console.log(`G9 production aggregate: ${productionFull.bytes} bytes, SHA-256 ${productionFull.hash}`);
 console.log(`G9 stripped production aggregate: ${productionStripped.bytes} bytes, SHA-256 ${productionStripped.hash}`);
 console.log(`G9 production calling convention PASS: ${cases.length}/6 exact after stripping additive contract fields.`);
-console.log(`G9 no-q compatibility path PASS: ${cases.length}/6 byte-identical to the injected 1.10 interface.`);
+console.log(`G9 no-q compatibility path PASS: ${cases.length}/6 byte-identical to the injected 1.11 interface.`);
 
 const observationCases = [
   {

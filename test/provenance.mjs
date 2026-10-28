@@ -21,10 +21,10 @@ const checks = [
   [segment.length === provenance.source.bytes, `source bytes ${segment.length}`],
   [hash(segment) === provenance.source.sha256, `source SHA-256 ${hash(segment)}`],
   [hash(engine) === provenance.artifact.sha256, `artifact SHA-256 ${hash(engine)}`],
-  [provenance.contractVersion === "1.10.0", `contractVersion ${provenance.contractVersion}`],
-  [provenance.publicSuffixArtifact?.commit === "8dc7be0846863263016729f0794f25567e2d3212", `public-suffix source commit ${provenance.publicSuffixArtifact?.commit}`],
-  [provenance.publicSuffixArtifact?.bytes === 216020, `public-suffix source bytes ${provenance.publicSuffixArtifact?.bytes}`],
-  [provenance.publicSuffixArtifact?.sha256 === "c16d8b621302b8b5c04ad7c6378494e5aec55e8017f87c4e9fc82efe61e1c7cf", `public-suffix source SHA-256 ${provenance.publicSuffixArtifact?.sha256}`],
+  [provenance.contractVersion === "1.11.0", `contractVersion ${provenance.contractVersion}`],
+  [provenance.publicSuffixArtifact?.commit === "8c777970f22eeb0588fdaed5c7154f057a9b3ccf", `public-suffix source commit ${provenance.publicSuffixArtifact?.commit}`],
+  [provenance.publicSuffixArtifact?.bytes === 219788, `public-suffix source bytes ${provenance.publicSuffixArtifact?.bytes}`],
+  [provenance.publicSuffixArtifact?.sha256 === "08baba1b4bec5ae4efafe69ee967fba494838b45361a04a9e46697c0140defdc", `public-suffix source SHA-256 ${provenance.publicSuffixArtifact?.sha256}`],
 ];
 if (publicLicense) {
   const license = readFileSync("LICENSE");

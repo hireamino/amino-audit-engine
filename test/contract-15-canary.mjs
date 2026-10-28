@@ -30,8 +30,8 @@ try {
   const mutant = join(dir, "throwing-meta-authoritative-absence.mjs");
   const mutated = replaceOnce(
     source,
-    '    } catch (e) {\n      return "lookup_failed";\n    }',
-    '    } catch (e) {\n      return "no_answers";\n    }',
+    "        } catch (error) {\n          rows = [];\n          meta = { status: null, error: true };\n        }",
+    "        } catch (error) {\n          rows = [];\n          meta = { status: 0, error: false };\n        }",
     "C15 throwing address metadata",
   );
   writeFileSync(mutant, mutated);

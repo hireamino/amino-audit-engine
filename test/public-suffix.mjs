@@ -7,8 +7,8 @@ import { pathToFileURL } from "node:url";
 const skillsDir = resolve(process.env.SKILLS_DIR || ".cache/amino-skills");
 const enginePath = resolve(process.env.ENGINE || "src/engine.mjs");
 const artifactPath = resolve(skillsDir, "public-suffix/public_suffix_rules.tsv");
-const expectedHash = "c16d8b621302b8b5c04ad7c6378494e5aec55e8017f87c4e9fc82efe61e1c7cf";
-const expectedBytes = 216020;
+const expectedHash = "08baba1b4bec5ae4efafe69ee967fba494838b45361a04a9e46697c0140defdc";
+const expectedBytes = 219788;
 const start = "// BEGIN GENERATED PUBLIC SUFFIX ARTIFACT\nconst PUBLIC_SUFFIX_ARTIFACT = String.raw`";
 const end = "`;\n// END GENERATED PUBLIC SUFFIX ARTIFACT\n";
 
@@ -40,13 +40,13 @@ const checks = [
   [hash(embedded) === expectedHash, `embedded artifact SHA-256 ${hash(embedded)}`],
   [generator.status === 0, "generator reproduces the committed engine byte-for-byte"],
   [embedded.includes(Buffer.from("// License, v. 2.0.")), "embedded MPL-2.0 notice"],
-  [embedded.includes(Buffer.from("// VERSION: 2026-10-01_23-02-52_UTC")), "embedded upstream VERSION"],
-  [embedded.includes(Buffer.from("// COMMIT: 6cd82aff889e3d64e5e03bc5c1f43da1934a960a")), "embedded upstream COMMIT"],
+  [embedded.includes(Buffer.from("// VERSION: 2026-10-22_08-36-41_UTC")), "embedded upstream VERSION"],
+  [embedded.includes(Buffer.from("// COMMIT: 8437e5262f13305f94087abe699b4fe2be1d1de8")), "embedded upstream COMMIT"],
 ];
 const engine = await import(pathToFileURL(enginePath).href);
-checks.push([engine.contractVersion === "1.10.0", `contractVersion ${engine.contractVersion}`]);
+checks.push([engine.contractVersion === "1.11.0", `contractVersion ${engine.contractVersion}`]);
 checks.push([typeof engine.registrableDomain === "function", "registrableDomain export"]);
-checks.push([registrableRootRows.length === 31, `shared assertion ledger registrableRoot ${registrableRootRows.length}`]);
+checks.push([registrableRootRows.length === 33, `shared assertion ledger registrableRoot ${registrableRootRows.length}`]);
 checks.push([
   registrableRootRows.every((fixture) =>
     engine.registrableDomain(fixture.input.domain) === fixture.expect.registrable_root),
