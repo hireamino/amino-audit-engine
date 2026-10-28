@@ -190,6 +190,8 @@ const RULE_INPUTS = Object.freeze(Object.fromEntries(
   Object.entries(RULE_GROUPS).flatMap(([group, rules]) =>
     rules.map((rule) => [rule, rule === "transport.ptr_not_fcrdns"
       ? Object.freeze(["rdns", "rdns_forward"])
+      : ["tls_rpt.missing", "tls_rpt.no_rua"].includes(rule)
+        ? Object.freeze(["tls_rpt", "transport"])
       : Object.freeze([group])])),
 ));
 
@@ -12158,6 +12160,10 @@ function ruleEvaluation(domain, trace) {
       candidates = candidates.filter((row) => !row.name.includes("._report._dmarc."));
     } else if (rule === "tls_rpt.present") {
       candidates = candidates.filter((row) => row.name === "_smtp._tls." + domain && row.rrtype === "TXT");
+    } else if (["tls_rpt.missing", "tls_rpt.no_rua"].includes(rule)) {
+      candidates = candidates.filter((row) =>
+        (row.scope === "tls_rpt" && row.name === "_smtp._tls." + domain && row.rrtype === "TXT")
+        || (row.scope === "transport" && row.name === domain && row.rrtype === "MX"));
     } else if (rule === "mta_sts.not_applicable") {
       candidates = candidates.filter((row) => row.name === domain && row.rrtype === "MX");
     } else if (["mta_sts.missing", "mta_sts.unconfirmed"].includes(rule)) {

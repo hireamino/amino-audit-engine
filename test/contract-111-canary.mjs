@@ -176,8 +176,20 @@ try {
     "C111 throwing DNSSEC probe must not abort the audit",
   );
 
-  if (passed !== 9) throw new Error(`C111 canary pass floor: expected 9, got ${passed}`);
-  console.log("C111 contract mutation canaries PASS: 9/9 named gates.");
+  requireRed(
+    "drop-tls-rpt-apex-mx-input",
+    replaceOnce(
+      source,
+      '      : ["tls_rpt.missing", "tls_rpt.no_rua"].includes(rule)\n        ? Object.freeze(["tls_rpt", "transport"])',
+      '      : ["tls_rpt.missing", "tls_rpt.no_rua"].includes(rule)\n        ? Object.freeze(["tls_rpt"])',
+      "TLS-RPT apex MX input",
+    ),
+    runContract,
+    "C111 TLS-RPT missing must depend on apex MX",
+  );
+
+  if (passed !== 10) throw new Error(`C111 canary pass floor: expected 10, got ${passed}`);
+  console.log("C111 contract mutation canaries PASS: 10/10 named gates.");
 } finally {
   rmSync(temporary, { recursive: true, force: true });
 }

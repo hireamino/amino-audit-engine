@@ -170,4 +170,19 @@ assert.equal(aaaaResult.rule_evaluation["ai_visibility.robots_blocks"],
   "C111 public A does not erase a failed companion AAAA input");
 console.log("C111 A/AAAA dependency PASS: failed companion AAAA remains non-conclusive.");
 
-console.log("C111 contract 1.11 gates PASS: 16 compact rows plus closed-world, cache, probe, action, and A/AAAA controls.");
+const tlsRptMx = adapters({
+  records: { [key("tls-rpt-mx.invalid", "A")]: ["93.184.216.34"] },
+  statuses: { [key("tls-rpt-mx.invalid", "MX")]: 2 },
+});
+const tlsRptMxResult = await engine.createAuditEngine(tlsRptMx.value).auditDomain("tls-rpt-mx.invalid");
+assert.equal(tlsRptMxResult.rule_evaluation["tls_rpt.missing"],
+  "MX tls-rpt-mx.invalid: SERVFAIL",
+  "C111 TLS-RPT missing must depend on apex MX");
+assert.equal(tlsRptMxResult.rule_evaluation["tls_rpt.no_rua"],
+  "MX tls-rpt-mx.invalid: SERVFAIL",
+  "C111 TLS-RPT no-rua must depend on apex MX");
+assert.equal(tlsRptMxResult.rule_evaluation["tls_rpt.present"], "conclusive",
+  "C111 TLS-RPT present must remain source-exact to its TXT record");
+console.log("C111 TLS-RPT apex-MX dependency PASS: missing/no-rua fail closed; present stays conclusive.");
+
+console.log("C111 contract 1.11 gates PASS: 16 compact rows plus closed-world, cache, probe, action, A/AAAA, and TLS-RPT/MX controls.");
